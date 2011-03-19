@@ -21,6 +21,8 @@
 - fixed intentation code that caused some of the snippets on docs.angularjs.org to be mangled.
 - many small improvements of the api docs.
 
+### Bug Fixes
+- Number filter would return incorrect value when fractional part had leading zeros.
 
 
 <a name="0.9.14"><a/>
