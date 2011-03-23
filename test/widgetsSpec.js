@@ -11,7 +11,9 @@ describe("widget", function(){
       } else {
         element = jqLite(html);
       }
-      return scope = angular.compile(element)();
+      scope = angular.compile(element)();
+      scope.$apply();
+      return scope;
     };
   });
 
@@ -24,25 +26,25 @@ describe("widget", function(){
     describe("text", function(){
       it('should input-text auto init and handle keydown/change events', function(){
         compile('<input type="Text" name="name" value="Misko" ng:change="count = count + 1" ng:init="count=0"/>');
-        expect(scope.$get('name')).toEqual("Misko");
-        expect(scope.$get('count')).toEqual(0);
+        expect(scope.name).toEqual("Misko");
+        expect(scope.count).toEqual(0);
 
-        scope.$set('name', 'Adam');
-        scope.$eval();
+        scope.name = 'Adam';
+        scope.$digest();
         expect(element.val()).toEqual("Adam");
 
         element.val('Shyam');
         browserTrigger(element, 'keydown');
         // keydown event must be deferred
-        expect(scope.$get('name')).toEqual('Adam');
+        expect(scope.name).toEqual('Adam');
         scope.$service('$browser').defer.flush();
-        expect(scope.$get('name')).toEqual('Shyam');
-        expect(scope.$get('count')).toEqual(1);
+        expect(scope.name).toEqual('Shyam');
+        expect(scope.count).toEqual(1);
 
         element.val('Kai');
         browserTrigger(element, 'change');
-        expect(scope.$get('name')).toEqual('Kai');
-        expect(scope.$get('count')).toEqual(2);
+        expect(scope.name).toEqual('Kai');
+        expect(scope.count).toEqual(2);
       });
 
       it('should not trigger eval if value does not change', function(){
@@ -65,15 +67,15 @@ describe("widget", function(){
 
         it("should format text", function(){
           compile('<input type="Text" name="list" value="a,b,c" ng:format="list"/>');
-          expect(scope.$get('list')).toEqual(['a', 'b', 'c']);
+          expect(scope.list).toEqual(['a', 'b', 'c']);
 
-          scope.$set('list', ['x', 'y', 'z']);
-          scope.$eval();
+          scope.list = ['x', 'y', 'z'];
+          scope.$digest();
           expect(element.val()).toEqual("x, y, z");
 
           element.val('1, 2, 3');
           browserTrigger(element);
-          expect(scope.$get('list')).toEqual(['1', '2', '3']);
+          expect(scope.list).toEqual(['1', '2', '3']);
         });
 
         it("should come up blank if null", function(){
@@ -85,7 +87,7 @@ describe("widget", function(){
         it("should show incorect text while number does not parse", function(){
           compile('<input type="text" name="age" ng:format="number"/>');
           scope.age = 123;
-          scope.$eval();
+          scope.$digest();
           scope.$element.val('123X');
           browserTrigger(scope.$element, 'change');
           expect(scope.$element.val()).toEqual('123X');
@@ -96,11 +98,11 @@ describe("widget", function(){
         it("should clober incorect text if model changes", function(){
           compile('<input type="text" name="age" ng:format="number" value="123X"/>');
           scope.age = 456;
-          scope.$eval();
+          scope.$digest();
           expect(scope.$element.val()).toEqual('456');
         });
 
-        it("should not clober text if model changes doe to itself", function(){
+        it("should not clober text if model changes due to itself", function(){
           compile('<input type="text" name="list" ng:format="list" value="a"/>');
 
           scope.$element.val('a ');
@@ -126,7 +128,7 @@ describe("widget", function(){
 
         it("should come up blank when no value specifiend", function(){
           compile('<input type="text" name="age" ng:format="number"/>');
-          scope.$eval();
+          scope.$digest();
           expect(scope.$element.val()).toEqual('');
           expect(scope.age).toEqual(null);
         });
@@ -171,7 +173,7 @@ describe("widget", function(){
           expect(scope.$element[0].checked).toEqual(false);
 
           scope.state = "Worked";
-          scope.$eval();
+          scope.$digest();
           expect(scope.state).toEqual("Worked");
           expect(scope.$element[0].checked).toEqual(true);
         });
@@ -184,8 +186,8 @@ describe("widget", function(){
           expect(element.hasClass('ng-validation-error')).toBeTruthy();
           expect(element.attr('ng-validation-error')).toEqual('Not a number');
 
-          scope.$set('price', '123');
-          scope.$eval();
+          scope.price =  '123';
+          scope.$digest();
           expect(element.hasClass('ng-validation-error')).toBeFalsy();
           expect(element.attr('ng-validation-error')).toBeFalsy();
 
@@ -200,8 +202,8 @@ describe("widget", function(){
           expect(element.hasClass('ng-validation-error')).toBeTruthy();
           expect(element.attr('ng-validation-error')).toEqual('Required');
 
-          scope.$set('price', '123');
-          scope.$eval();
+          scope.price =  '123';
+          scope.$digest();
           expect(element.hasClass('ng-validation-error')).toBeFalsy();
           expect(element.attr('ng-validation-error')).toBeFalsy();
         });
@@ -213,7 +215,7 @@ describe("widget", function(){
           expect(lastValue).toEqual("NOT_CALLED");
 
           scope.url = 'http://server';
-          scope.$eval();
+          scope.$digest();
           expect(lastValue).toEqual("http://server");
 
           delete angularValidator.myValidator;
@@ -238,8 +240,8 @@ describe("widget", function(){
       expect(element.hasClass('ng-validation-error')).toBeTruthy();
       expect(element.attr('ng-validation-error')).toEqual('Required');
 
-      scope.$set('price', 'xxx');
-      scope.$eval();
+      scope.price =  'xxx';
+      scope.$digest();
       expect(element.hasClass('ng-validation-error')).toBeFalsy();
       expect(element.attr('ng-validation-error')).toBeFalsy();
 
@@ -252,19 +254,19 @@ describe("widget", function(){
     it('should allow conditions on ng:required', function() {
       compile('<input type="text" name="price" ng:required="ineedz"/>',
               jqLite(document.body));
-      scope.$set('ineedz', false);
-      scope.$eval();
+      scope.ineedz =  false;
+      scope.$digest();
       expect(element.hasClass('ng-validation-error')).toBeFalsy();
       expect(element.attr('ng-validation-error')).toBeFalsy();
 
-      scope.$set('price', 'xxx');
-      scope.$eval();
+      scope.price =  'xxx';
+      scope.$digest();
       expect(element.hasClass('ng-validation-error')).toBeFalsy();
       expect(element.attr('ng-validation-error')).toBeFalsy();
 
-      scope.$set('price', '');
-      scope.$set('ineedz', true);
-      scope.$eval();
+      scope.price =  '';
+      scope.ineedz =  true;
+      scope.$digest();
       expect(element.hasClass('ng-validation-error')).toBeTruthy();
       expect(element.attr('ng-validation-error')).toEqual('Required');
 
@@ -276,31 +278,31 @@ describe("widget", function(){
 
     it("should process ng:required2", function() {
       compile('<textarea name="name">Misko</textarea>');
-      expect(scope.$get('name')).toEqual("Misko");
+      expect(scope.name).toEqual("Misko");
 
-      scope.$set('name', 'Adam');
-      scope.$eval();
+      scope.name =  'Adam';
+      scope.$digest();
       expect(element.val()).toEqual("Adam");
 
       element.val('Shyam');
       browserTrigger(element);
-      expect(scope.$get('name')).toEqual('Shyam');
+      expect(scope.name).toEqual('Shyam');
 
       element.val('Kai');
       browserTrigger(element);
-      expect(scope.$get('name')).toEqual('Kai');
+      expect(scope.name).toEqual('Kai');
     });
 
     it('should call ng:change on button click', function(){
       compile('<input type="button" value="Click Me" ng:change="clicked = true"/>');
       browserTrigger(element);
-      expect(scope.$get('clicked')).toEqual(true);
+      expect(scope.clicked).toEqual(true);
     });
 
     it('should support button alias', function(){
       compile('<button ng:change="clicked = true">Click {{"Me"}}.</button>');
       browserTrigger(element);
-      expect(scope.$get('clicked')).toEqual(true);
+      expect(scope.clicked).toEqual(true);
       expect(scope.$element.text()).toEqual("Click Me.");
     });
 
@@ -317,11 +319,11 @@ describe("widget", function(){
         expect(b.name.split('@')[1]).toEqual('chose');
         expect(scope.chose).toEqual('B');
         scope.chose = 'A';
-        scope.$eval();
+        scope.$digest();
         expect(a.checked).toEqual(true);
 
         scope.chose = 'B';
-        scope.$eval();
+        scope.$digest();
         expect(a.checked).toEqual(false);
         expect(b.checked).toEqual(true);
         expect(scope.clicked).not.toBeDefined();
@@ -362,7 +364,7 @@ describe("widget", function(){
             '</select>');
         expect(scope.selection).toEqual('B');
         scope.selection = 'A';
-        scope.$eval();
+        scope.$digest();
         expect(scope.selection).toEqual('A');
         expect(element[0].childNodes[0].selected).toEqual(true);
       });
@@ -379,7 +381,7 @@ describe("widget", function(){
         expect(scope.selection).toEqual(1);
 
         scope.selection = 2;
-        scope.$eval();
+        scope.$digest();
         expect(element[0].childNodes[3].selected).toEqual(true);
       });
 
@@ -391,7 +393,7 @@ describe("widget", function(){
             jqLite(document.body));
         scope.selection = 1;
         scope.options = ['one', 'two'];
-        scope.$eval();
+        scope.$flush();
         expect(element[0].value).toEqual('1');
         expect(element.hasClass(NG_VALIDATION_ERROR)).toEqual(false);
       });
@@ -403,10 +405,10 @@ describe("widget", function(){
               '<option value="{{value}}">B</option>' +
             '</select>');
         scope.selection = 'B';
-        scope.$eval();
+        scope.$flush();
         expect(element[0].childNodes[1].selected).toEqual(false);
         scope.value = 'B';
-        scope.$eval();
+        scope.$flush();
         expect(element[0].childNodes[1].selected).toEqual(true);
       });
 
@@ -441,7 +443,7 @@ describe("widget", function(){
               '<option ng:repeat="obj in objs" value="{{obj}}">{{obj.name}}</option>' +
             '</select>');
         scope.objs = [{name:'A'}, {name:'B'}];
-        scope.$eval();
+        scope.$flush();
         expect(scope.selection).toEqual({name:'A'});
       });
 
@@ -451,7 +453,7 @@ describe("widget", function(){
               '<option ng:repeat="obj in objs" value="{{$index}}">{{obj.name}}</option>' +
             '</select>');
         scope.objs = [{name:'A'}, {name:'B'}];
-        scope.$eval();
+        scope.$flush();
         expect(scope.selection).toBe(scope.objs[0]);
       });
 
@@ -464,7 +466,7 @@ describe("widget", function(){
                 '</select>');
         scope.a = 'foo';
         scope.b = 'bar';
-        scope.$eval();
+        scope.$flush();
 
         expect(scope.$element.text()).toBe('foobarC');
       });
@@ -479,7 +481,7 @@ describe("widget", function(){
                 '</select>');
         expect(scope.selection).toEqual(['B']);
         scope.selection = ['A'];
-        scope.$eval();
+        scope.$digest();
         expect(element[0].childNodes[0].selected).toEqual(true);
       });
 
@@ -491,7 +493,7 @@ describe("widget", function(){
                     '<option value="2">C</option>' +
                   '</select>' +
                  '</div>');
-        scope.$eval();
+        scope.$digest();
         expect(scope.selection).toEqual([{name:'A'}, {name:'B'}]);
       });
 
@@ -503,7 +505,7 @@ describe("widget", function(){
             '<option value="2">C</option>' +
           '</select>');
         scope.list = [{name:'A'}, {name:'B'}, {name:'C'}];
-        scope.$eval();
+        scope.$digest();
         expect(scope.selection).toEqual([]);
       });
 
@@ -515,7 +517,7 @@ describe("widget", function(){
                     '<option value="2">C</option>' +
                   '</select>' +
                 '</div>');
-        scope.$eval();
+        scope.$digest();
         expect(scope.selection).toEqual([{name:'B'}]);
       });
 
@@ -534,19 +536,12 @@ describe("widget", function(){
     });
 
     it('should report error on assignment error', function(){
-      compile('<input type="text" name="throw \'\'" value="x"/>');
-      expect(element.hasClass('ng-exception')).toBeTruthy();
-      expect(scope.$service('$log').error.logs.shift()[0]).
-        toMatchError(/Syntax Error: Token '''' is an unexpected token/);
+      expect(function(){
+        compile('<input type="text" name="throw \'\'" value="x"/>');
+      }).toThrow("Syntax Error: Token '''' is an unexpected token at column 7 of the expression [throw ''] starting at [''].");
+      $logMock.error.logs.shift();
     });
 
-    it('should report error on ng:change exception', function(){
-      compile('<button ng:change="a-2=x">click</button>');
-      browserTrigger(element);
-      expect(element.hasClass('ng-exception')).toBeTruthy();
-      expect(scope.$service('$log').error.logs.shift()[0]).
-        toMatchError(/Syntax Error: Token '=' implies assignment but \[a-2\] can not be assigned to/);
-    });
   });
 
   describe('ng:switch', function(){
@@ -558,43 +553,38 @@ describe("widget", function(){
         '</ng:switch>');
       expect(element.html()).toEqual('');
       scope.select = 1;
-      scope.$eval();
+      scope.$apply();
       expect(element.text()).toEqual('first:');
       scope.name="shyam";
-      scope.$eval();
+      scope.$apply();
       expect(element.text()).toEqual('first:shyam');
       scope.select = 2;
-      scope.$eval();
+      scope.$apply();
       expect(element.text()).toEqual('second:shyam');
       scope.name = 'misko';
-      scope.$eval();
+      scope.$apply();
       expect(element.text()).toEqual('second:misko');
       scope.select = true;
-      scope.$eval();
+      scope.$apply();
       expect(element.text()).toEqual('true:misko');
-    });
-
-    it("should compare stringified versions", function(){
-      var switchWidget = angular.widget('ng:switch');
-      expect(switchWidget.equals(true, 'true')).toEqual(true);
     });
 
     it('should switch on switch-when-default', function(){
       compile('<ng:switch on="select">' +
-          '<div ng:switch-when="1">one</div>' +
-          '<div ng:switch-default>other</div>' +
-        '</ng:switch>');
-      scope.$eval();
+                '<div ng:switch-when="1">one</div>' +
+                '<div ng:switch-default>other</div>' +
+              '</ng:switch>');
+      scope.$apply();
       expect(element.text()).toEqual('other');
       scope.select = 1;
-      scope.$eval();
+      scope.$apply();
       expect(element.text()).toEqual('one');
     });
 
     it('should call change on switch', function(){
       var scope = angular.compile('<ng:switch on="url" change="name=\'works\'"><div ng:switch-when="a">{{name}}</div></ng:switch>')();
       scope.url = 'a';
-      scope.$eval();
+      scope.$apply();
       expect(scope.name).toEqual(undefined);
       expect(scope.$element.text()).toEqual('works');
       dealoc(scope);
@@ -605,11 +595,11 @@ describe("widget", function(){
     it('should include on external file', function() {
       var element = jqLite('<ng:include src="url" scope="childScope"></ng:include>');
       var scope = angular.compile(element)();
-      scope.childScope = createScope();
+      scope.childScope = scope.$new();
       scope.childScope.name = 'misko';
       scope.url = 'myUrl';
       scope.$service('$xhr.cache').data.myUrl = {value:'{{name}}'};
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('misko');
       dealoc(scope);
     });
@@ -617,16 +607,16 @@ describe("widget", function(){
     it('should remove previously included text if a falsy value is bound to src', function() {
       var element = jqLite('<ng:include src="url" scope="childScope"></ng:include>');
       var scope = angular.compile(element)();
-      scope.childScope = createScope();
+      scope.childScope = scope.$new();
       scope.childScope.name = 'igor';
       scope.url = 'myUrl';
       scope.$service('$xhr.cache').data.myUrl = {value:'{{name}}'};
-      scope.$eval();
+      scope.$flush();
 
       expect(element.text()).toEqual('igor');
 
       scope.url = undefined;
-      scope.$eval();
+      scope.$flush();
 
       expect(element.text()).toEqual('');
       dealoc(scope);
@@ -637,11 +627,13 @@ describe("widget", function(){
       var scope = angular.compile(element)();
       scope.url = 'myUrl';
       scope.$service('$xhr.cache').data.myUrl = {value:'{{c=c+1}}'};
-      scope.$eval();
+      scope.$flush();
+      // TODO: becouse we are using scope==this, the eval gets registered
+      // during the flush phanse and hence does not get called.
+      // I don't think passing 'this' makes sense. Does haveing scope on ng:include makes sense?
+      scope.$flush();
 
-      // this one should really be just '1', but due to lack of real events things are not working
-      // properly. see discussion at: http://is.gd/ighKk
-      expect(element.text()).toEqual('4');
+      expect(element.text()).toEqual('1');
       dealoc(element);
     });
 
@@ -653,9 +645,26 @@ describe("widget", function(){
 
       scope.url = 'myUrl';
       scope.$service('$xhr.cache').data.myUrl = {value:'my partial'};
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('my partial');
       expect(scope.loaded).toBe(true);
+      dealoc(element);
+    });
+
+    it('should destroy old scope', function(){
+      var element = jqLite('<ng:include src="url"></ng:include>');
+      var scope = angular.compile(element)();
+
+      expect(scope.$childHead).toBeFalsy();
+
+      scope.url = 'myUrl';
+      scope.$service('$xhr.cache').data.myUrl = {value:'my partial'};
+      scope.$flush();
+      expect(scope.$childHead).toBeTruthy();
+
+      scope.url = null;
+      scope.$flush();
+      expect(scope.$childHead).toBeFalsy();
       dealoc(element);
     });
   });
@@ -702,24 +711,30 @@ describe("widget", function(){
       var scope = compile('<ul><li ng:repeat="item in items" ng:init="suffix = \';\'" ng:bind="item + suffix"></li></ul>');
 
       Array.prototype.extraProperty = "should be ignored";
+      // INIT
       scope.items = ['misko', 'shyam'];
-      scope.$eval();
+      scope.$flush();
+      expect(element.find('li').length).toEqual(2);
       expect(element.text()).toEqual('misko;shyam;');
       delete Array.prototype.extraProperty;
 
+      // GROW
       scope.items = ['adam', 'kai', 'brad'];
-      scope.$eval();
+      scope.$flush();
+      expect(element.find('li').length).toEqual(3);
       expect(element.text()).toEqual('adam;kai;brad;');
 
+      // SHRINK
       scope.items = ['brad'];
-      scope.$eval();
+      scope.$flush();
+      expect(element.find('li').length).toEqual(1);
       expect(element.text()).toEqual('brad;');
     });
 
     it('should ng:repeat over object', function(){
       var scope = compile('<ul><li ng:repeat="(key, value) in items" ng:bind="key + \':\' + value + \';\' "></li></ul>');
-      scope.$set('items', {misko:'swe', shyam:'set'});
-      scope.$eval();
+      scope.items = {misko:'swe', shyam:'set'};
+      scope.$flush();
       expect(element.text()).toEqual('misko:swe;shyam:set;');
     });
 
@@ -731,28 +746,23 @@ describe("widget", function(){
       var scope = compile('<ul><li ng:repeat="(key, value) in items" ng:bind="key + \':\' + value + \';\' "></li></ul>');
       scope.items = new Class();
       scope.items.name = 'value';
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('name:value;');
     });
 
     it('should error on wrong parsing of ng:repeat', function(){
-      var scope = compile('<ul><li ng:repeat="i dont parse"></li></ul>');
+      expect(function(){
+        compile('<ul><li ng:repeat="i dont parse"></li></ul>');
+      }).toThrow("Expected ng:repeat in form of 'item in collection' but got 'i dont parse'.");
 
-      expect(scope.$service('$log').error.logs.shift()[0]).
-        toEqualError("Expected ng:repeat in form of 'item in collection' but got 'i dont parse'.");
-
-      expect(scope.$element.attr('ng-exception')).
-        toMatch(/Expected ng:repeat in form of 'item in collection' but got 'i dont parse'/);
-      expect(scope.$element).toHaveClass('ng-exception');
-
-      dealoc(scope);
+      $logMock.error.logs.shift();
     });
 
     it('should expose iterator offset as $index when iterating over arrays', function() {
       var scope = compile('<ul><li ng:repeat="item in items" ' +
                                   'ng:bind="item + $index + \'|\'"></li></ul>');
       scope.items = ['misko', 'shyam', 'frodo'];
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('misko0|shyam1|frodo2|');
     });
 
@@ -760,7 +770,7 @@ describe("widget", function(){
       var scope = compile('<ul><li ng:repeat="(key, val) in items" ' +
                                   'ng:bind="key + \':\' + val + $index + \'|\'"></li></ul>');
       scope.items = {'misko':'m', 'shyam':'s', 'frodo':'f'};
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('misko:m0|shyam:s1|frodo:f2|');
     });
 
@@ -768,7 +778,7 @@ describe("widget", function(){
       var scope = compile('<ul><li ng:repeat="item in items" ' +
                                   'ng:bind="item + \':\' + $position + \'|\'"></li></ul>');
       scope.items = ['misko', 'shyam', 'doug', 'frodo'];
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('misko:first|shyam:middle|doug:middle|frodo:last|');
     });
 
@@ -776,7 +786,7 @@ describe("widget", function(){
       var scope = compile('<ul><li ng:repeat="(key, val) in items" ' +
                                   'ng:bind="key + \':\' + val + \':\' + $position + \'|\'"></li></ul>');
       scope.items = {'misko':'m', 'shyam':'s', 'doug':'d', 'frodo':'f'};
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('misko:m:first|shyam:s:middle|doug:d:middle|frodo:f:last|');
     });
   });
@@ -786,8 +796,8 @@ describe("widget", function(){
 
     it('should prevent compilation of the owning element and its children', function(){
       var scope = compile('<div ng:non-bindable><span ng:bind="name"></span></div>');
-      scope.$set('name', 'misko');
-      scope.$eval();
+      scope.name =  'misko';
+      scope.$digest();
       expect(element.text()).toEqual('');
     });
   });
@@ -810,7 +820,7 @@ describe("widget", function(){
 
     it('should do nothing when no routes are defined', function() {
       $location.updateHash('/unknown');
-      rootScope.$eval();
+      rootScope.$digest();
       expect(rootScope.$element.text()).toEqual('');
     });
 
@@ -823,13 +833,15 @@ describe("widget", function(){
 
       $location.updateHash('/foo');
       $browser.xhr.expectGET('myUrl1').respond('<div>{{1+3}}</div>');
-      rootScope.$eval();
+      rootScope.$digest();
+      rootScope.$flush();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('4');
 
       $location.updateHash('/bar');
       $browser.xhr.expectGET('myUrl2').respond('angular is da best');
-      rootScope.$eval();
+      rootScope.$digest();
+      rootScope.$flush();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('angular is da best');
     });
@@ -839,12 +851,14 @@ describe("widget", function(){
 
       $location.updateHash('/foo');
       $browser.xhr.expectGET('myUrl1').respond('<div>{{1+3}}</div>');
-      rootScope.$eval();
+      rootScope.$digest();
+      rootScope.$flush();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('4');
 
       $location.updateHash('/unknown');
-      rootScope.$eval();
+      rootScope.$digest();
+      rootScope.$flush();
       expect(rootScope.$element.text()).toEqual('');
     });
 
@@ -854,16 +868,20 @@ describe("widget", function(){
 
       $location.updateHash('/foo');
       $browser.xhr.expectGET('myUrl1').respond('<div>{{parentVar}}</div>');
-      rootScope.$eval();
+      rootScope.$digest();
+      rootScope.$flush();
       $browser.xhr.flush();
       expect(rootScope.$element.text()).toEqual('parent');
 
       rootScope.parentVar = 'new parent';
-      rootScope.$eval();
+      rootScope.$digest();
+      rootScope.$flush();
       expect(rootScope.$element.text()).toEqual('new parent');
     });
 
     it('should be possible to nest ng:view in ng:include', function() {
+      dealoc(rootScope); // we are about to override it.
+
       var myApp = angular.scope();
       var $browser = myApp.$service('$browser');
       $browser.xhr.expectGET('includePartial.html').respond('view: <ng:view></ng:view>');
@@ -872,13 +890,14 @@ describe("widget", function(){
       var $route = myApp.$service('$route');
       $route.when('/foo', {controller: angular.noop, template: 'viewPartial.html'});
 
-      dealoc(rootScope); // we are about to override it.
       rootScope = angular.compile(
           '<div>' +
             'include: <ng:include src="\'includePartial.html\'">' +
           '</ng:include></div>')(myApp);
+      rootScope.$apply();
 
       $browser.xhr.expectGET('viewPartial.html').respond('content');
+      rootScope.$flush();
       $browser.xhr.flush();
 
       expect(rootScope.$element.text()).toEqual('include: view: content');
@@ -908,21 +927,21 @@ describe("widget", function(){
           respond('<div ng:init="log.push(\'init\')">' +
                     '<div ng:controller="ChildCtrl"></div>' +
                   '</div>');
-      rootScope.$eval();
+      rootScope.$apply();
       $browser.xhr.flush();
 
-      expect(rootScope.log).toEqual(['parent', 'init', 'child']);
+      expect(rootScope.log).toEqual(['parent', 'child', 'init']);
 
       $location.updateHash('');
-      rootScope.$eval();
-      expect(rootScope.log).toEqual(['parent', 'init', 'child']);
+      rootScope.$apply();
+      expect(rootScope.log).toEqual(['parent', 'child', 'init']);
 
       rootScope.log = [];
       $location.updateHash('/foo');
-      rootScope.$eval();
+      rootScope.$apply();
       $browser.defer.flush();
 
-      expect(rootScope.log).toEqual(['parent', 'init', 'child']);
+      expect(rootScope.log).toEqual(['parent', 'child', 'init']);
     });
   });
 });

@@ -4,7 +4,7 @@ describe('$cookies', function() {
   beforeEach(function() {
     $browser = new MockBrowser();
     $browser.cookieHash['preexisting'] = 'oldCookie';
-    scope = angular.scope(null, angular.service, {$browser: $browser});
+    scope = angular.scope(angular.service, {$browser: $browser});
     scope.$cookies = scope.$service('$cookies');
   });
 
@@ -36,13 +36,13 @@ describe('$cookies', function() {
 
   it('should create or update a cookie when a value is assigned to a property', function() {
     scope.$cookies.oatmealCookie = 'nom nom';
-    scope.$eval();
+    scope.$flush();
 
     expect($browser.cookies()).
       toEqual({'preexisting': 'oldCookie', 'oatmealCookie':'nom nom'});
 
     scope.$cookies.oatmealCookie = 'gone';
-    scope.$eval();
+    scope.$flush();
 
     expect($browser.cookies()).
       toEqual({'preexisting': 'oldCookie', 'oatmealCookie': 'gone'});
@@ -54,7 +54,7 @@ describe('$cookies', function() {
     scope.$cookies.nullVal = null;
     scope.$cookies.undefVal = undefined;
     scope.$cookies.preexisting = function(){};
-    scope.$eval();
+    scope.$flush();
     expect($browser.cookies()).toEqual({'preexisting': 'oldCookie'});
     expect(scope.$cookies).toEqual({'preexisting': 'oldCookie'});
   });
@@ -62,13 +62,13 @@ describe('$cookies', function() {
 
   it('should remove a cookie when a $cookies property is deleted', function() {
     scope.$cookies.oatmealCookie = 'nom nom';
-    scope.$eval();
+    scope.$flush();
     $browser.poll();
     expect($browser.cookies()).
       toEqual({'preexisting': 'oldCookie', 'oatmealCookie':'nom nom'});
 
     delete scope.$cookies.oatmealCookie;
-    scope.$eval();
+    scope.$flush();
 
     expect($browser.cookies()).toEqual({'preexisting': 'oldCookie'});
   });
@@ -83,16 +83,16 @@ describe('$cookies', function() {
 
     //drop if no previous value
     scope.$cookies.longCookie = longVal;
-    scope.$eval();
+    scope.$flush();
     expect(scope.$cookies).toEqual({'preexisting': 'oldCookie'});
 
 
     //reset if previous value existed
     scope.$cookies.longCookie = 'shortVal';
-    scope.$eval();
+    scope.$flush();
     expect(scope.$cookies).toEqual({'preexisting': 'oldCookie', 'longCookie': 'shortVal'});
     scope.$cookies.longCookie = longVal;
-    scope.$eval();
+    scope.$flush();
     expect(scope.$cookies).toEqual({'preexisting': 'oldCookie', 'longCookie': 'shortVal'});
   });
 });

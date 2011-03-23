@@ -20,8 +20,9 @@ describe("directive", function(){
 
   it("should ng:eval", function() {
     var scope = compile('<div ng:init="a=0" ng:eval="a = a + 1"></div>');
+    scope.$flush();
     expect(scope.a).toEqual(1);
-    scope.$eval();
+    scope.$flush();
     expect(scope.a).toEqual(2);
   });
 
@@ -30,7 +31,7 @@ describe("directive", function(){
       var scope = compile('<div ng:bind="a"></div>');
       expect(element.text()).toEqual('');
       scope.a = 'misko';
-      scope.$eval();
+      scope.$flush();
       expect(element.hasClass('ng-binding')).toEqual(true);
       expect(element.text()).toEqual('misko');
     });
@@ -38,24 +39,24 @@ describe("directive", function(){
     it('should set text to blank if undefined', function() {
       var scope = compile('<div ng:bind="a"></div>');
       scope.a = 'misko';
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('misko');
       scope.a = undefined;
-      scope.$eval();
+      scope.$flush();
       expect(element.text()).toEqual('');
     });
 
     it('should set html', function() {
       var scope = compile('<div ng:bind="html|html"></div>');
       scope.html = '<div unknown>hello</div>';
-      scope.$eval();
+      scope.$flush();
       expect(lowercase(element.html())).toEqual('<div>hello</div>');
     });
 
     it('should set unsafe html', function() {
       var scope = compile('<div ng:bind="html|html:\'unsafe\'"></div>');
       scope.html = '<div onclick="">hello</div>';
-      scope.$eval();
+      scope.$flush();
       expect(lowercase(element.html())).toEqual('<div onclick="">hello</div>');
     });
 
@@ -64,7 +65,7 @@ describe("directive", function(){
         return jqLite('<a>hello</a>');
       };
       var scope = compile('<div ng:bind="0|myElement"></div>');
-      scope.$eval();
+      scope.$flush();
       expect(lowercase(element.html())).toEqual('<a>hello</a>');
     });
 
@@ -74,12 +75,14 @@ describe("directive", function(){
         return 'HELLO';
       };
       var scope = compile('<div>before<div ng:bind="0|myFilter"></div>after</div>');
+      scope.$flush();
       expect(sortedHtml(scope.$element)).toEqual('<div>before<div class="filter" ng:bind="0|myFilter">HELLO</div>after</div>');
     });
 
 
     it('should suppress rendering of falsy values', function(){
       var scope = compile('<div>{{ null }}{{ undefined }}{{ "" }}-{{ 0 }}{{ false }}</div>');
+      scope.$flush();
       expect(scope.$element.text()).toEqual('-0false');
     });
 
@@ -88,8 +91,8 @@ describe("directive", function(){
   describe('ng:bind-template', function(){
     it('should ng:bind-template', function() {
       var scope = compile('<div ng:bind-template="Hello {{name}}!"></div>');
-      scope.$set('name', 'Misko');
-      scope.$eval();
+      scope.name = 'Misko';
+      scope.$flush();
       expect(element.hasClass('ng-binding')).toEqual(true);
       expect(element.text()).toEqual('Hello Misko!');
     });
@@ -101,6 +104,7 @@ describe("directive", function(){
         return text;
       };
       var scope = compile('<div>before<span ng:bind-template="{{\'HELLO\'|myFilter}}">INNER</span>after</div>');
+      scope.$flush();
       expect(scope.$element.text()).toEqual("beforeHELLOafter");
       expect(innerText).toEqual('INNER');
     });
@@ -110,12 +114,14 @@ describe("directive", function(){
   describe('ng:bind-attr', function(){
     it('should bind attributes', function(){
       var scope = compile('<img ng:bind-attr="{src:\'http://localhost/mysrc\', alt:\'myalt\'}"/>');
+      scope.$flush();
       expect(element.attr('src')).toEqual('http://localhost/mysrc');
       expect(element.attr('alt')).toEqual('myalt');
     });
 
     it('should not pretty print JSON in attributes', function(){
       var scope = compile('<img alt="{{ {a:1} }}"/>');
+      scope.$flush();
       expect(element.attr('alt')).toEqual('{"a":1}');
     });
   });
@@ -130,7 +136,7 @@ describe("directive", function(){
     scope.disabled = true;
     scope.readonly = true;
     scope.checked = true;
-    scope.$eval();
+    scope.$flush();
 
     expect(input.disabled).toEqual(true);
     expect(input.readOnly).toEqual(true);
@@ -140,16 +146,16 @@ describe("directive", function(){
   describe('ng:click', function(){
     it('should get called on a click', function(){
       var scope = compile('<div ng:click="clicked = true"></div>');
-      scope.$eval();
-      expect(scope.$get('clicked')).toBeFalsy();
+      scope.$flush();
+      expect(scope.clicked).toBeFalsy();
 
       browserTrigger(element, 'click');
-      expect(scope.$get('clicked')).toEqual(true);
+      expect(scope.clicked).toEqual(true);
     });
 
     it('should stop event propagation', function() {
       var scope = compile('<div ng:click="outer = true"><div ng:click="inner = true"></div></div>');
-      scope.$eval();
+      scope.$flush();
       expect(scope.outer).not.toBeDefined();
       expect(scope.inner).not.toBeDefined();
 
@@ -167,7 +173,7 @@ describe("directive", function(){
       var scope = compile('<form action="" ng:submit="submitted = true">' +
                             '<input type="submit"/>' +
                           '</form>');
-      scope.$eval();
+      scope.$flush();
       expect(scope.submitted).not.toBeDefined();
 
       browserTrigger(element.children()[0]);
@@ -177,7 +183,7 @@ describe("directive", function(){
 
   it('should ng:class', function(){
     var scope = compile('<div class="existing" ng:class="[\'A\', \'B\']"></div>');
-    scope.$eval();
+    scope.$flush();
     expect(element.hasClass('existing')).toBeTruthy();
     expect(element.hasClass('A')).toBeTruthy();
     expect(element.hasClass('B')).toBeTruthy();
@@ -185,7 +191,7 @@ describe("directive", function(){
 
   it('should ng:class odd/even', function(){
     var scope = compile('<ul><li ng:repeat="i in [0,1]" class="existing" ng:class-odd="\'odd\'" ng:class-even="\'even\'"></li><ul>');
-    scope.$eval();
+    scope.$flush();
     var e1 = jqLite(element[0].childNodes[1]);
     var e2 = jqLite(element[0].childNodes[2]);
     expect(e1.hasClass('existing')).toBeTruthy();
@@ -197,50 +203,50 @@ describe("directive", function(){
   describe('ng:style', function(){
     it('should set', function(){
       var scope = compile('<div ng:style="{color:\'red\'}"></div>');
-      scope.$eval();
+      scope.$flush();
       expect(element.css('color')).toEqual('red');
     });
 
     it('should silently ignore undefined style', function() {
       var scope = compile('<div ng:style="myStyle"></div>');
-      scope.$eval();
+      scope.$flush();
       expect(element.hasClass('ng-exception')).toBeFalsy();
     });
 
     it('should preserve and remove previous style', function(){
       var scope = compile('<div style="color:red;" ng:style="myStyle"></div>');
-      scope.$eval();
+      scope.$flush();
       expect(getStyle(element)).toEqual({color:'red'});
       scope.myStyle = {color:'blue', width:'10px'};
-      scope.$eval();
+      scope.$flush();
       expect(getStyle(element)).toEqual({color:'blue', width:'10px'});
       scope.myStyle = {};
-      scope.$eval();
+      scope.$flush();
       expect(getStyle(element)).toEqual({color:'red'});
     });
   });
 
   it('should silently ignore undefined ng:style', function() {
     var scope = compile('<div ng:style="myStyle"></div>');
-    scope.$eval();
+    scope.$flush();
     expect(element.hasClass('ng-exception')).toBeFalsy();
   });
 
   it('should ng:show', function(){
     var scope = compile('<div ng:hide="hide"></div>');
-    scope.$eval();
+    scope.$flush();
     expect(isCssVisible(scope.$element)).toEqual(true);
-    scope.$set('hide', true);
-    scope.$eval();
+    scope.hide = true;
+    scope.$flush();
     expect(isCssVisible(scope.$element)).toEqual(false);
   });
 
   it('should ng:hide', function(){
     var scope = compile('<div ng:show="show"></div>');
-    scope.$eval();
+    scope.$flush();
     expect(isCssVisible(scope.$element)).toEqual(false);
-    scope.$set('show', true);
-    scope.$eval();
+    scope.show = true;
+    scope.$flush();
     expect(isCssVisible(scope.$element)).toEqual(true);
   });
 
@@ -289,11 +295,13 @@ describe("directive", function(){
       expect(scope.greeter.greeting).toEqual('hello');
       expect(scope.childGreeter.greeting).toEqual('hey');
       expect(scope.childGreeter.$parent.greeting).toEqual('hello');
+      scope.$flush();
       expect(scope.$element.text()).toEqual('hey dude!');
     });
 
   });
 
+  //TODO: this needs to be deleted
   it('should eval things according to ng:eval-order', function(){
     var scope = compile(
           '<div ng:init="log=\'\'">' +
@@ -304,6 +312,7 @@ describe("directive", function(){
               '<span bind-template="{{log = log + \'d\'}}"></span>' +
             '</span>' +
           '</div>');
+    scope.$flush();
     expect(scope.log).toEqual('abcde');
   });
 

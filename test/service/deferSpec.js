@@ -2,7 +2,7 @@ describe('$defer', function() {
   var scope, $browser, $defer, $exceptionHandler;
 
   beforeEach(function(){
-    scope = angular.scope({}, angular.service,
+    scope = angular.scope(angular.service,
                           {'$exceptionHandler': jasmine.createSpy('$exceptionHandler')});
     $browser = scope.$service('$browser');
     $defer = scope.$service('$defer');

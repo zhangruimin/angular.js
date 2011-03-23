@@ -52,7 +52,8 @@ if ('i' !== 'I'.toLowerCase()) {
 function fromCharCode(code) { return String.fromCharCode(code); }
 
 
-var $$element         = '$element',
+var _undefined        = undefined,
+    _null             = null,
     $$update          = '$update',
     $$scope           = '$scope',
     $$validate        = '$validate',
@@ -62,7 +63,6 @@ var $$element         = '$element',
     $console          = 'console',
     $date             = 'date',
     $display          = 'display',
-    $element          = 'element',
     $function         = 'function',
     $length           = 'length',
     $name             = 'name',
@@ -663,8 +663,8 @@ function copy(source, destination){
  * @description
  * Determines if two objects or value are equivalent.
  *
- * To be equivalent, they must pass `==` comparison or be of the same type and have all their
- * properties pass `==` comparison. During property comparision properties of `function` type and
+ * To be equivalent, they must pass `===` comparison or be of the same type and have all their
+ * properties pass `===` comparison. During property comparision properties of `function` type and
  * properties with name starting with `$` are ignored.
  *
  * Supports values types, arrays and objects.
@@ -704,7 +704,7 @@ function copy(source, destination){
  * </doc:example>
  */
 function equals(o1, o2) {
-  if (o1 == o2) return true;
+  if (o1 === o2) return true;
   if (o1 === null || o2 === null) return false;
   var t1 = typeof o1, t2 = typeof o2, length, key, keySet;
   if (t1 == t2 && t1 == 'object') {
@@ -1067,13 +1067,14 @@ function angularInit(config, document){
 
   if (autobind) {
     var element = isString(autobind) ? document.getElementById(autobind) : document,
-        scope = compile(element)(createScope({'$config':config})),
+        scope = compile(element)(createScope()),
         $browser = scope.$service('$browser');
 
     if (config.css)
       $browser.addCss(config.base_url + config.css);
     else if(msie<8)
       $browser.addJs(config.base_url + config.ie_compat, config.ie_compat_id);
+    scope.$apply();
   }
 }
 
@@ -1130,5 +1131,5 @@ function assertArg(arg, name, reason) {
 }
 
 function assertArgFn(arg, name) {
-  assertArg(isFunction(arg, name, 'not a function'));
-}
+  assertArg(isFunction(arg), name, 'not a function, got  ' + (typeof arg));
+};

@@ -27,7 +27,7 @@ describe('$route', function() {
       log += 'onChange();';
     });
     $location.update('http://server#/Book/Moby/Chapter/Intro?p=123');
-    scope.$eval();
+    scope.$digest();
     expect(log).toEqual('onChange();');
     expect($route.current.params).toEqual({book:'Moby', chapter:'Intro', p:'123'});
     expect($route.current.scope.log).toEqual('<init>');
@@ -35,19 +35,19 @@ describe('$route', function() {
 
     log = '';
     $location.update('http://server#/Blank?ignore');
-    scope.$eval();
+    scope.$digest();
     expect(log).toEqual('onChange();');
     expect($route.current.params).toEqual({ignore:true});
     expect($route.current.scope.$id).not.toEqual(lastId);
 
     log = '';
     $location.update('http://server#/NONE');
-    scope.$eval();
+    scope.$digest();
     expect(log).toEqual('onChange();');
     expect($route.current).toEqual(null);
 
     $route.when('/NONE', {template:'instant update'});
-    scope.$eval();
+    scope.$digest();
     expect($route.current.template).toEqual('instant update');
   });
 
@@ -73,7 +73,7 @@ describe('$route', function() {
     expect(onChangeSpy).not.toHaveBeenCalled();
 
     $location.updateHash('/foo');
-    scope.$eval();
+    scope.$digest();
 
     expect($route.current.template).toEqual('foo.html');
     expect($route.current.controller).toBeUndefined();
@@ -96,7 +96,7 @@ describe('$route', function() {
     expect(onChangeSpy).not.toHaveBeenCalled();
 
     $location.updateHash('/unknownRoute');
-    scope.$eval();
+    scope.$digest();
 
     expect($route.current.template).toBe('404.html');
     expect($route.current.controller).toBe(NotFoundCtrl);
@@ -105,12 +105,45 @@ describe('$route', function() {
 
     onChangeSpy.reset();
     $location.updateHash('/foo');
-    scope.$eval();
+    scope.$digest();
 
     expect($route.current.template).toEqual('foo.html');
     expect($route.current.controller).toBeUndefined();
     expect($route.current.scope.notFoundProp).toBeUndefined();
     expect(onChangeSpy).toHaveBeenCalled();
+  });
+
+  it('should $destroy old routes', function(){
+    var scope = angular.scope(),
+        $location = scope.$service('$location'),
+        $route = scope.$service('$route');
+
+    $route.when('/foo', {template: 'foo.html', controller: function(){ this.name = 'FOO';}});
+    $route.when('/bar', {template: 'bar.html', controller: function(){ this.name = 'BAR';}});
+    $route.when('/baz', {template: 'baz.html'});
+
+    expect(scope.$childHead).toEqual(null);
+
+    $location.updateHash('/foo');
+    scope.$digest();
+    expect(scope.$childHead).toBeTruthy();
+    expect(scope.$childHead).toEqual(scope.$childTail);
+
+    $location.updateHash('/bar');
+    scope.$digest();
+    expect(scope.$childHead).toBeTruthy();
+    expect(scope.$childHead).toEqual(scope.$childTail);
+    return
+
+    $location.updateHash('/baz');
+    scope.$digest();
+    expect(scope.$childHead).toBeTruthy();
+    expect(scope.$childHead).toEqual(scope.$childTail);
+
+    $location.updateHash('/');
+    scope.$digest();
+    expect(scope.$childHead).toEqual(null);
+    expect(scope.$childTail).toEqual(null);
   });
 
 
@@ -132,7 +165,7 @@ describe('$route', function() {
       expect($route.current).toBeNull();
       expect(onChangeSpy).not.toHaveBeenCalled();
 
-      scope.$eval(); //triggers initial route change - match the redirect route
+      scope.$digest(); //triggers initial route change - match the redirect route
       $browser.defer.flush(); //triger route change - match the route we redirected to
 
       expect($location.hash).toBe('/foo');
@@ -141,7 +174,7 @@ describe('$route', function() {
 
       onChangeSpy.reset();
       $location.updateHash('');
-      scope.$eval(); //match the redirect route + update $browser
+      scope.$digest(); //match the redirect route + update $browser
       $browser.defer.flush(); //match the route we redirected to
 
       expect($location.hash).toBe('/foo');
@@ -150,7 +183,7 @@ describe('$route', function() {
 
       onChangeSpy.reset();
       $location.updateHash('/baz');
-      scope.$eval(); //match the redirect route + update $browser
+      scope.$digest(); //match the redirect route + update $browser
       $browser.defer.flush(); //match the route we redirected to
 
       expect($location.hash).toBe('/bar');
@@ -168,10 +201,10 @@ describe('$route', function() {
 
       $route.when('/foo/:id/foo/:subid/:extraId', {redirectTo: '/bar/:id/:subid/23'});
       $route.when('/bar/:id/:subid/:subsubid', {template: 'bar.html'});
-      scope.$eval();
+      scope.$digest();
 
       $location.updateHash('/foo/id1/foo/subid3/gah');
-      scope.$eval(); //triggers initial route change - match the redirect route
+      scope.$digest(); //triggers initial route change - match the redirect route
       $browser.defer.flush(); //triger route change - match the route we redirected to
 
       expect($location.hash).toBe('/bar/id1/subid3/23?extraId=gah');
@@ -188,10 +221,10 @@ describe('$route', function() {
 
       $route.when('/bar/:id/:subid/:subsubid', {template: 'bar.html'});
       $route.when('/foo/:id/:extra', {redirectTo: '/bar/:id/:subid/99'});
-      scope.$eval();
+      scope.$digest();
 
       $location.hash = '/foo/id3/eId?subid=sid1&appended=true';
-      scope.$eval(); //triggers initial route change - match the redirect route
+      scope.$digest(); //triggers initial route change - match the redirect route
       $browser.defer.flush(); //triger route change - match the route we redirected to
 
       expect($location.hash).toBe('/bar/id3/sid1/99?appended=true&extra=eId');
@@ -208,10 +241,10 @@ describe('$route', function() {
       $route.when('/bar/:id/:subid/:subsubid', {template: 'bar.html'});
       $route.when('/foo/:id',
                   {redirectTo: customRedirectFn});
-      scope.$eval();
+      scope.$digest();
 
       $location.hash = '/foo/id3?subid=sid1&appended=true';
-      scope.$eval(); //triggers initial route change - match the redirect route
+      scope.$digest(); //triggers initial route change - match the redirect route
       $browser.defer.flush(); //triger route change - match the route we redirected to
 
       expect($location.hash).toBe('custom');

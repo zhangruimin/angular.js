@@ -125,7 +125,8 @@
      </doc:source>
    </doc:example>
  */
-angularServiceInject('$xhr', function($browser, $error, $log, $updateView){
+angularServiceInject('$xhr', function($browser, $error){
+  var scope = this;
   return function(method, url, post, callback){
     if (isFunction(post)) {
       callback = post;
@@ -136,7 +137,7 @@ angularServiceInject('$xhr', function($browser, $error, $log, $updateView){
     }
 
     $browser.xhr(method, url, post, function(code, response){
-      try {
+      scope.$apply(function(){
         if (isString(response)) {
           if (response.match(/^\)\]\}',\n/)) response=response.substr(6);
           if (/^\s*[\[\{]/.exec(response) && /[\}\]]\s*$/.exec(response)) {
@@ -147,16 +148,12 @@ angularServiceInject('$xhr', function($browser, $error, $log, $updateView){
           callback(code, response);
         } else {
           $error(
-            {method: method, url:url, data:post, callback:callback},
-            {status: code, body:response});
+              {method: method, url:url, data:post, callback:callback},
+              {status: code, body:response});
         }
-      } catch (e) {
-        $log.error(e);
-      } finally {
-        $updateView();
-      }
+      });
     }, {
         'X-XSRF-TOKEN': $browser.cookies()['XSRF-TOKEN']
     });
   };
-}, ['$browser', '$xhr.error', '$log', '$updateView']);
+}, ['$browser', '$xhr.error']);

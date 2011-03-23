@@ -56,7 +56,7 @@
       </doc:scenario>
     </doc:example>
  */
-angularServiceInject('$route', function(location, $updateView) {
+angularServiceInject('$route', function($location, $updateView) {
   var routes = {},
       onChange = [],
       matcher = switchRouteMatcher,
@@ -203,10 +203,13 @@ angularServiceInject('$route', function(location, $updateView) {
   function updateRoute(){
     var childScope, routeParams, pathParams, segmentMatch, key, redir;
 
+    if ($route.current) {
+      $route.current.scope.$destroy();
+    }
     $route.current = null;
     forEach(routes, function(rParams, rPath) {
       if (!pathParams) {
-        if (pathParams = matcher(location.hashPath, rPath)) {
+        if (pathParams = matcher($location.hashPath, rPath)) {
           routeParams = rParams;
         }
       }
@@ -220,7 +223,7 @@ angularServiceInject('$route', function(location, $updateView) {
         if (isString(routeParams.redirectTo)) {
           // interpolate the redirectTo string
           redir = {hashPath: '',
-                   hashSearch: extend({}, location.hashSearch, pathParams)};
+                   hashSearch: extend({}, $location.hashSearch, pathParams)};
 
           forEach(routeParams.redirectTo.split(':'), function(segment, i) {
             if (i==0) {
@@ -228,39 +231,34 @@ angularServiceInject('$route', function(location, $updateView) {
             } else {
               segmentMatch = segment.match(/(\w+)(.*)/);
               key = segmentMatch[1];
-              redir.hashPath += pathParams[key] || location.hashSearch[key];
+              redir.hashPath += pathParams[key] || $location.hashSearch[key];
               redir.hashPath += segmentMatch[2] || '';
               delete redir.hashSearch[key];
             }
           });
         } else {
           // call custom redirectTo function
-          redir = {hash: routeParams.redirectTo(pathParams, location.hash, location.hashPath,
-                                                location.hashSearch)};
+          redir = {hash: routeParams.redirectTo(pathParams, $location.hash, $location.hashPath,
+                                                $location.hashSearch)};
         }
 
-        location.update(redir);
-        $updateView(); //TODO this is to work around the $location<=>$browser issues
+        $location.update(redir);
         return;
       }
 
-      childScope = createScope(parentScope);
+      childScope = parentScope.$new(routeParams.controller);
       $route.current = extend({}, routeParams, {
         scope: childScope,
-        params: extend({}, location.hashSearch, pathParams)
+        params: extend({}, $location.hashSearch, pathParams)
       });
     }
 
     //fire onChange callbacks
-    forEach(onChange, parentScope.$tryEval);
-
-    if (childScope) {
-      childScope.$become($route.current.controller);
-    }
+    forEach(onChange, parentScope.$eval, parentScope);
   }
 
 
-  this.$watch(function(){return dirty + location.hash;}, updateRoute);
+  this.$watch(function(){return dirty + $location.hash;}, updateRoute)();
 
   return $route;
 }, ['$location', '$updateView']);

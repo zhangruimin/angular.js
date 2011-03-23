@@ -5,7 +5,7 @@ var angularGlobal = {
     if (type == $object) {
       if (obj instanceof Array) return $array;
       if (isDate(obj)) return $date;
-      if (obj.nodeType == 1) return $element;
+      if (obj.nodeType == 1) return 'element';
     }
     return type;
   }
@@ -163,7 +163,7 @@ var angularArray = {
       </doc:example>
    */
   'sum':function(array, expression) {
-    var fn = angular['Function']['compile'](expression);
+    var fn = angularFunction.compile(expression);
     var sum = 0;
     for (var i = 0; i < array.length; i++) {
       var value = 1 * fn(array[i]);
@@ -505,21 +505,21 @@ var angularArray = {
        </doc:source>
        <doc:scenario>
          it('should calculate counts', function() {
-           expect(binding('items.$count(\'points==1\')')).toEqual(2);
-           expect(binding('items.$count(\'points>1\')')).toEqual(1);
+           expect(binding('items.$count(\'points==1\')')).toEqual('2');
+           expect(binding('items.$count(\'points>1\')')).toEqual('1');
          });
 
          it('should recalculate when updated', function() {
            using('.doc-example-live li:first-child').input('item.points').enter('23');
-           expect(binding('items.$count(\'points==1\')')).toEqual(1);
-           expect(binding('items.$count(\'points>1\')')).toEqual(2);
+           expect(binding('items.$count(\'points==1\')')).toEqual('1');
+           expect(binding('items.$count(\'points>1\')')).toEqual('2');
          });
        </doc:scenario>
      </doc:example>
    */
   'count':function(array, condition) {
     if (!condition) return array.length;
-    var fn = angular['Function']['compile'](condition), count = 0;
+    var fn = angularFunction.compile(condition), count = 0;
     forEach(array, function(value){
       if (fn(value)) {
         count ++;
@@ -620,7 +620,7 @@ var angularArray = {
           descending = $.charAt(0) == '-';
           $ = $.substring(1);
         }
-        get = expressionCompile($).fnSelf;
+        get = expressionCompile($);
       }
       return reverse(function(a,b){
         return compare(get(a),get(b));
@@ -779,14 +779,14 @@ var angularDate = {
   };
 
 var angularFunction = {
-  'compile':function(expression) {
+  'compile': function(expression) {
     if (isFunction(expression)){
       return expression;
     } else if (expression){
-      return expressionCompile(expression).fnSelf;
+      return expressionCompile(expression);
     } else {
-      return identity;
-    }
+     return identity;
+   }
   }
 };
 

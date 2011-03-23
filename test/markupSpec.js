@@ -18,24 +18,25 @@ describe("markups", function(){
   it('should translate {{}} in text', function(){
     compile('<div>hello {{name}}!</div>');
     expect(sortedHtml(element)).toEqual('<div>hello <span ng:bind="name"></span>!</div>');
-    scope.$set('name', 'Misko');
-    scope.$eval();
+    scope.name = 'Misko';
+    scope.$flush();
     expect(sortedHtml(element)).toEqual('<div>hello <span ng:bind="name">Misko</span>!</div>');
   });
 
   it('should translate {{}} in terminal nodes', function(){
     compile('<select name="x"><option value="">Greet {{name}}!</option></select>');
+    scope.$flush();
     expect(sortedHtml(element).replace(' selected="true"', '')).toEqual('<select name="x"><option ng:bind-template="Greet {{name}}!">Greet !</option></select>');
-    scope.$set('name', 'Misko');
-    scope.$eval();
+    scope.name = 'Misko';
+    scope.$flush();
     expect(sortedHtml(element).replace(' selected="true"', '')).toEqual('<select name="x"><option ng:bind-template="Greet {{name}}!">Greet Misko!</option></select>');
   });
 
   it('should translate {{}} in attributes', function(){
     compile('<img src="http://server/{{path}}.png"/>');
     expect(element.attr('ng:bind-attr')).toEqual('{"src":"http://server/{{path}}.png"}');
-    scope.$set('path', 'a/b');
-    scope.$eval();
+    scope.path = 'a/b';
+    scope.$flush();
     expect(element.attr('src')).toEqual("http://server/a/b.png");
   });
 
@@ -92,7 +93,7 @@ describe("markups", function(){
   it('should bind src', function() {
     compile('<img ng:src="{{url}}" />');
     scope.url = 'http://localhost/';
-    scope.$eval();
+    scope.$flush();
     expect(element.attr('src')).toEqual('http://localhost/');
   });
 

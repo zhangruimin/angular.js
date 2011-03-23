@@ -11,9 +11,9 @@ describe('compiler', function(){
         };
       },
 
-      watch: function(expression, element){
+      observe: function(expression, element){
         return function() {
-          this.$watch(expression, function(val){
+          this.$observe(expression, function(scope, val){
             if (val)
               log += ":" + val;
           });
@@ -57,16 +57,16 @@ describe('compiler', function(){
     expect(log).toEqual("hello misko");
   });
 
-  it('should watch scope', function(){
-    scope = compile('<span watch="name"/>');
+  it('should observe scope', function(){
+    scope = compile('<span observe="name"/>');
     expect(log).toEqual("");
-    scope.$eval();
-    scope.$set('name', 'misko');
-    scope.$eval();
-    scope.$eval();
-    scope.$set('name', 'adam');
-    scope.$eval();
-    scope.$eval();
+    scope.$flush();
+    scope.name = 'misko';
+    scope.$flush();
+    scope.$flush();
+    scope.name = 'adam';
+    scope.$flush();
+    scope.$flush();
     expect(log).toEqual(":misko:adam");
   });
 
@@ -82,17 +82,18 @@ describe('compiler', function(){
       element.removeAttr("duplicate");
       var linker = this.compile(element);
       return function(marker) {
-        this.$onEval(function() {
+        this.$observe(function() {
           var scope = linker(angular.scope(), noop);
           marker.after(scope.$element);
         });
       };
     };
     scope = compile('before<span duplicate="expr">x</span>after');
+    scope.$flush();
     expect(sortedHtml(scope.$element)).toEqual('<div>before<#comment></#comment><span>x</span>after</div>');
-    scope.$eval();
+    scope.$flush();
     expect(sortedHtml(scope.$element)).toEqual('<div>before<#comment></#comment><span>x</span><span>x</span>after</div>');
-    scope.$eval();
+    scope.$flush();
     expect(sortedHtml(scope.$element)).toEqual('<div>before<#comment></#comment><span>x</span><span>x</span><span>x</span>after</div>');
   });
 

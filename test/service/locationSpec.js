@@ -44,9 +44,10 @@ describe('$location', function() {
     $location.update('http://www.angularjs.org/');
     $location.update({path: '/a/b'});
     expect($location.href).toEqual('http://www.angularjs.org/a/b');
-    expect($browser.getUrl()).toEqual(origBrowserUrl);
-    scope.$eval();
     expect($browser.getUrl()).toEqual('http://www.angularjs.org/a/b');
+    $location.path = '/c';
+    scope.$digest();
+    expect($browser.getUrl()).toEqual('http://www.angularjs.org/c');
   });
 
 
@@ -63,7 +64,7 @@ describe('$location', function() {
 
   it('should update hash on hashPath or hashSearch update', function() {
     $location.update('http://server/#path?a=b');
-    scope.$eval();
+    scope.$digest();
     $location.update({hashPath: '', hashSearch: {}});
 
     expect($location.hash).toEqual('');
@@ -72,10 +73,10 @@ describe('$location', function() {
 
   it('should update hashPath and hashSearch on $location.hash change upon eval', function(){
     $location.update('http://server/#path?a=b');
-    scope.$eval();
+    scope.$digest();
 
     $location.hash = '';
-    scope.$eval();
+    scope.$digest();
 
     expect($location.href).toEqual('http://server/');
     expect($location.hashPath).toEqual('');
@@ -86,11 +87,14 @@ describe('$location', function() {
   it('should update hash on $location.hashPath or $location.hashSearch change upon eval',
       function() {
     $location.update('http://server/#path?a=b');
-    scope.$eval();
+    //scope.$digest();
+    expect($location.href).toEqual('http://server/#path?a=b');
+    expect($location.hashPath).toEqual('path');
+    expect($location.hashSearch).toEqual({a:'b'});
+
     $location.hashPath = '';
     $location.hashSearch = {};
-
-    scope.$eval();
+    scope.$digest();
 
     expect($location.href).toEqual('http://server/');
     expect($location.hash).toEqual('');
@@ -101,14 +105,14 @@ describe('$location', function() {
     scope.$location = scope.$service('$location'); //publish to the scope for $watch
 
     var log = '';
-    scope.$watch('$location.hash', function(){
-      log += this.$location.hashPath + ';';
-    });
+    scope.$watch('$location.hash', function(scope){
+      log += scope.$location.hashPath + ';';
+    })();
     expect(log).toEqual(';');
 
     log = '';
     scope.$location.hash = '/abc';
-    scope.$eval();
+    scope.$digest();
     expect(scope.$location.hash).toEqual('/abc');
     expect(log).toEqual('/abc;');
   });
@@ -118,7 +122,7 @@ describe('$location', function() {
 
     it('should update hash with escaped hashPath', function() {
       $location.hashPath = 'foo=bar';
-      scope.$eval();
+      scope.$digest();
       expect($location.hash).toBe('foo%3Dbar');
     });
 
@@ -131,7 +135,7 @@ describe('$location', function() {
       $location.host = 'host';
       $location.href = 'https://hrefhost:23/hrefpath';
 
-      scope.$eval();
+      scope.$digest();
 
       expect($location).toEqualData({href: 'https://hrefhost:23/hrefpath',
                                      protocol: 'https',
@@ -154,7 +158,7 @@ describe('$location', function() {
       $location.host = 'host';
       $location.path = '/path';
 
-      scope.$eval();
+      scope.$digest();
 
       expect($location).toEqualData({href: 'http://host:333/path#hash',
                                      protocol: 'http',
@@ -235,7 +239,7 @@ describe('$location', function() {
       expect($location.href).toBe('http://server');
       expect($location.hash).toBe('');
 
-      scope.$eval();
+      scope.$digest();
 
       expect($location.href).toBe('http://server');
       expect($location.hash).toBe('');

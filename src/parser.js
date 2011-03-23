@@ -657,6 +657,107 @@ function parser(text, json){
   }
 }
 
+//////////////////////////////////////////////////
+// Parser helper functions
+//////////////////////////////////////////////////
+
+function setter(instance, path, value){
+  var element = path.split('.');
+  for ( var i = 0; element.length > 1; i++) {
+    var key = element.shift();
+    var newInstance = instance[key];
+    if (!newInstance) {
+      newInstance = {};
+      instance[key] = newInstance;
+    }
+    instance = newInstance;
+  }
+  instance[element.shift()] = value;
+  return value;
+}
+
+function getter(instance, path, unboundFn) {
+  if (!path) return instance;
+  var element = path.split('.');
+  var key;
+  var lastInstance = instance;
+  var len = element.length;
+  for ( var i = 0; i < len; i++) {
+    key = element[i];
+    if (!key.match(/^[\$\w][\$\w\d]*$/))
+        throw "Expression '" + path + "' is not a valid expression for accesing variables.";
+    if (instance) {
+      lastInstance = instance;
+      instance = instance[key];
+    }
+    if (isUndefined(instance)  && key.charAt(0) == '$') {
+      var type = angular['Global']['typeOf'](lastInstance);
+      type = angular[type.charAt(0).toUpperCase()+type.substring(1)];
+      var fn = type ? type[[key.substring(1)]] : _undefined;
+      if (fn) {
+        instance = bind(lastInstance, fn, lastInstance);
+        return instance;
+      }
+    }
+  }
+  if (!unboundFn && isFunction(instance)) {
+    return bind(lastInstance, instance);
+  }
+  return instance;
+}
+
+var getterFnCache = {},
+    compileCache = {},
+    JS_KEYWORDS = {};
+forEach(
+    ("abstract,boolean,break,byte,case,catch,char,class,const,continue,debugger,default," +
+    "delete,do,double,else,enum,export,extends,false,final,finally,float,for,function,goto," +
+    "if,implements,import,ininstanceof,intinterface,long,native,new,null,package,private," +
+    "protected,public,return,short,static,super,switch,synchronized,this,throw,throws," +
+    "transient,true,try,typeof,var,volatile,void,undefined,while,with").split(/,/),
+  function(key){ JS_KEYWORDS[key] = true;}
+);
+
+function getterFn(path){
+  var fn = getterFnCache[path];
+  if (fn) return fn;
+
+  var code = 'var l, fn, t;\n';
+  forEach(path.split('.'), function(key) {
+    key = (JS_KEYWORDS[key]) ? '["' + key + '"]' : '.' + key;
+    code += 'if(!s) return s;\n' +
+            'l=s;\n' +
+            's=s' + key + ';\n' +
+            'if(typeof s=="function" && !(s instanceof RegExp)) s = function(){ return l'+key+'.apply(l, arguments); };\n';
+    if (key.charAt(1) == '$') {
+      // special code for super-imposed functions
+      var name = key.substr(2);
+      code += 'if(!s) {\n' +
+              '  t = angular.Global.typeOf(l);\n' +
+              '  fn = (angular[t.charAt(0).toUpperCase() + t.substring(1)]||{})["' + name + '"];\n' +
+              '  if (fn) s = function(){ return fn.apply(l, [l].concat(Array.prototype.slice.call(arguments, 0, arguments.length))); };\n' +
+              '}\n';
+    }
+  });
+  code += 'return s;';
+  fn = Function('s', code);
+  fn["toString"] = function(){ return code; };
+
+  return getterFnCache[path] = fn;
+}
+
+///////////////////////////////////
+
+//TODO: Deprecate? Remove?
+function expressionCompile(exp){
+  if (typeof exp === $function) return exp;
+  var fn = compileCache[exp];
+  if (!fn) {
+    fn = compileCache[exp] =  parser(exp).statements();
+  }
+  return fn;
+}
+
 
 
 

@@ -45,7 +45,7 @@ function serviceUpdateViewFactory($browser){
   var scheduled;
   function update(){
     scheduled = false;
-    rootScope.$eval();
+    rootScope.$flush();
   }
   return $browser.isMock ? update : function(){
     if (!scheduled) {

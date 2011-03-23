@@ -9,12 +9,12 @@ function DocsController($location, $browser, $window) {
     $location.hashPath = '!angular';
   }
 
-  this.$watch('$location.hashPath', function(hashPath) {
+  this.$watch('$location.hashPath', function(scope, hashPath) {
     if (hashPath.match(/^!/)) {
-      this.partialId = hashPath.substring(1);
-      this.partialTitle = (angular.Array.filter(NG_PAGES, {id:this.partialId})[0]||{}).name;
+      scope.partialId = hashPath.substring(1);
+      scope.partialTitle = (angular.Array.filter(NG_PAGES, {id:scope.partialId})[0]||{}).name;
     }
-  });
+  })();
 
   this.getUrl = function(page){
     return '#!' + page.id;

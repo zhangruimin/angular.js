@@ -300,3 +300,17 @@ img.right {
 h1, h2, h3, h4, h5 {
   clear: both;
 }
+
+.table {
+  border-collapse: collapse;
+}
+
+.table th:FIRST-CHILD {
+  text-align: right;
+}
+
+.table th,
+.table td {
+  border: 1px solid black;
+  padding: .5em 1em;
+}

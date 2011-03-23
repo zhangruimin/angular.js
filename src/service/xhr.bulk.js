@@ -56,6 +56,6 @@ angularServiceInject('$xhr.bulk', function($xhr, $error, $log){
       }
     });
   };
-  this.$onEval(PRIORITY_LAST, bulkXHR.flush);
+  this.$observe(bind(null, bulkXHR.flush, noop));
   return bulkXHR;
 }, ['$xhr', '$xhr.error', '$log']);

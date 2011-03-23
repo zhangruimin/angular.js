@@ -2,7 +2,7 @@ describe('$xhr', function() {
   var scope, $browser, $browserXhr, $log, $xhr, log;
 
   beforeEach(function(){
-    scope = angular.scope({}, angular.service, { '$log': $log = {
+    scope = angular.scope(angular.service, { '$log': $log = {
         error: dump
     } });
     $browser = scope.$service('$browser');

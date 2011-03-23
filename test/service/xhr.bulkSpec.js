@@ -2,7 +2,7 @@ describe('$xhr.bulk', function() {
   var scope, $browser, $browserXhr, $log, $xhrBulk, $xhrError, log;
 
   beforeEach(function(){
-    scope = angular.scope({}, angular.service, {
+    scope = angular.scope(angular.service, {
       '$xhr.error': $xhrError = jasmine.createSpy('$xhr.error'),
       '$log': $log = {}
     });
