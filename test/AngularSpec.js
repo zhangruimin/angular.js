@@ -583,4 +583,22 @@ describe('angular', function(){
       });
     }
   });
+
+
+  describe('nextUid()', function(){
+    it('should retun new id per call', function(){
+      var last;
+      var current;
+      var count = 100;
+
+      last = nextUid();
+      while(count--) {
+        current = nextUid();
+        expect(current.match(/[\d\w]+/)).toBeTruthy();
+        expect(last).not.toEqual(current);
+        last = current;
+      }
+    });
+  });
+
 });
