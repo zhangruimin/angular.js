@@ -24,6 +24,7 @@ angularService('$browser', function($log){
 }, {$inject:['$log']});
 
 extend(angular, {
+  'annotate': annotate,
   'element': jqLite,
   'compile': compile,
   'scope': createScope,

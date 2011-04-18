@@ -466,7 +466,7 @@ angularDirective("ng:bind-attr", function(expression){
  * TODO: maybe we should consider allowing users to control event propagation in the future.
  */
 angularDirective("ng:click", function(expression, element){
-  return injectUpdateView(function($updateView, element){
+  return inject('$updateView', function($updateView, element){
     var self = this;
     element.bind('click', function(event){
       self.$tryEval(expression, element);
@@ -516,7 +516,7 @@ angularDirective("ng:click", function(expression, element){
    </doc:example>
  */
 angularDirective("ng:submit", function(expression, element) {
-  return injectUpdateView(function($updateView, element) {
+  return inject('$updateView', function($updateView, element) {
     var self = this;
     element.bind('submit', function(event) {
       self.$tryEval(expression, element);

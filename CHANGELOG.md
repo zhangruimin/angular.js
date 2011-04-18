@@ -1,6 +1,10 @@
 <a name="0.9.16"><a/>
 # <angular/> 0.9.16 weather-control (in-progress) #
 
+### Breaking changes
+- $service now has $service.invoke for method injection ($service(self, fn) no longer works)
+- injection name inference no longer supports method curry and linking functions. Both must be
+  explicitly specified using $inject property.
 
 
 
