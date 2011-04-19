@@ -716,10 +716,7 @@ Scope.prototype = {
    * @returns {*} The result of evaluating the expression.
    */
   $eval: function(expr) {
-    var fn = isString(expr)
-      ? parser(expr).statements()
-      : expr || noop;
-    return fn(this);
+    return (isString(expr) ? compileExpr(expr) : expr || noop)(this);
   },
 
   /**

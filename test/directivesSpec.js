@@ -289,13 +289,13 @@ describe("directive", function(){
         }
       };
       var scope = compile('<div ng:controller="temp.Greeter"><div ng:controller="temp.ChildGreeter">{{greet("misko")}}</div></div>');
+      scope.$apply();
       expect(scope.greeting).not.toBeDefined();
       expect(scope.greeter.greeting).toEqual('hello');
       expect(scope.greeter.greet('misko')).toEqual('hello misko!');
       expect(scope.greeter.greeting).toEqual('hello');
       expect(scope.childGreeter.greeting).toEqual('hey');
       expect(scope.childGreeter.$parent.greeting).toEqual('hello');
-      scope.$flush();
       expect(scope.$element.text()).toEqual('hey dude!');
     });
 

@@ -356,6 +356,20 @@ forEach({
     });
   },
 
+  prepend: function(element, node) {
+    if (element.nodeType === 1) {
+      var index = element.firstChild;
+      forEach(new JQLite(node), function(child){
+        if (index) {
+          element.insertBefore(child, index);
+        } else {
+          element.appendChild(child);
+          index = child;
+        }
+      });
+    }
+  },
+
   remove: function(element) {
     JQLiteDealoc(element);
     var parent = element.parentNode;

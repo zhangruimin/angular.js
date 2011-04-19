@@ -1,12 +1,14 @@
 <a name="0.9.16"><a/>
 # <angular/> 0.9.16 weather-control (in-progress) #
 
+### New Features
+- Added ng:options directive (http://docs.angularjs.org/#!angular.directive.ng:options)
+
 ### Breaking changes
+- Dynamic Iteration (ng:repeater) on <option> elements is no longer supported. Use ng:options
 - $service now has $service.invoke for method injection ($service(self, fn) no longer works)
 - injection name inference no longer supports method curry and linking functions. Both must be
   explicitly specified using $inject property.
-
-
 
 <a name="0.9.15"><a/>
 # <angular/> 0.9.15 lethal-stutter (2011-04-11) #

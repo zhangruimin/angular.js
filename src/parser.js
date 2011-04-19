@@ -239,6 +239,8 @@ function parser(text, json){
       pipeFunction =
         function (){ throwError("is not valid json", {text:text, index:0}); };
   }
+  //TODO: Should'nt all of the public methods have assertAllConsumed?
+  //TODO: I think these should be public instead of scope.$eval() being the enterenece.
   return {
       assignable: assertConsumed(assignable),
       primary: assertConsumed(primary),
@@ -748,12 +750,17 @@ function getterFn(path){
 
 ///////////////////////////////////
 
-//TODO: Deprecate? Remove?
+//TODO: Should this function be public?
+function compileExpr(expr) {
+  return parser(expr).statements();
+}
+
+//TODO: Deprecate? Remove!
 function expressionCompile(exp){
   if (typeof exp === $function) return exp;
   var fn = compileCache[exp];
   if (!fn) {
-    fn = compileCache[exp] =  parser(exp).statements();
+    fn = compileCache[exp] =  compileExpr(exp);
   }
   return fn;
 }

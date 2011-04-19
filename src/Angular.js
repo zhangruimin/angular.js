@@ -54,7 +54,6 @@ function fromCharCode(code) { return String.fromCharCode(code); }
 
 var _undefined        = undefined,
     _null             = null,
-    $$update          = '$update',
     $$scope           = '$scope',
     $$validate        = '$validate',
     $angular          = 'angular',
