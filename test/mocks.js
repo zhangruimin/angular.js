@@ -27,7 +27,6 @@
  *
  * See {@link angular.mock} for more info on angular mocks.
  */
-// TODO: Replace with simple rethrow????
 var $logMock = {
   log: function(){ $logMock.log.logs.push(concat([], arguments, 0)); },
   warn: function(){ $logMock.warn.logs.push(concat([], arguments, 0)); },

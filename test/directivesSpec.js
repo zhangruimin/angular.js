@@ -301,7 +301,7 @@ describe("directive", function(){
 
   });
 
-  //TODO: this needs to be deleted
+  //TODO(misko): this needs to be deleted when ng:eval-order is gone
   it('should eval things according to ng:eval-order', function(){
     var scope = compile(
           '<div ng:init="log=\'\'">' +

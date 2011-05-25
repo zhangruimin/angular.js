@@ -30,7 +30,7 @@ Template.prototype = {
       childScope = isFunction(this.newScope) ? scope.$new(this.newScope(scope)) : scope.$new();
       element.data($$scope, childScope);
     }
-    // TODO: refactor this!!!
+    // TODO(misko): refactor this!!!
     // Why are inits even here?
     forEach(this.inits, function(fn) {
       queue.push(function() {
@@ -194,9 +194,6 @@ Compiler.prototype = {
       scope.$element = element;
       (cloneConnectFn||noop)(element, scope);
       template.attach(element, scope);
-      // TODO: should this be here?
-      // NO, since we get into infinity loop with ng:repeat
-      // scope.$service('$updateView')();
       return scope;
     };
   },

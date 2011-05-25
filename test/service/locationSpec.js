@@ -87,7 +87,6 @@ describe('$location', function() {
   it('should update hash on $location.hashPath or $location.hashSearch change upon eval',
       function() {
     $location.update('http://server/#path?a=b');
-    //scope.$digest();
     expect($location.href).toEqual('http://server/#path?a=b');
     expect($location.hashPath).toEqual('path');
     expect($location.hashSearch).toEqual({a:'b'});

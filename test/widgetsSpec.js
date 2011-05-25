@@ -504,9 +504,10 @@ describe("widget", function(){
       scope.url = 'myUrl';
       scope.$service('$xhr.cache').data.myUrl = {value:'{{c=c+1}}'};
       scope.$flush();
-      // TODO: becouse we are using scope==this, the eval gets registered
-      // during the flush phanse and hence does not get called.
-      // I don't think passing 'this' makes sense. Does haveing scope on ng:include makes sense?
+      // TODO: because we are using scope==this, the eval gets registered
+      // during the flush phase and hence does not get called.
+      // I don't think passing 'this' makes sense. Does having scope on ng:include makes sense?
+      // should we make scope="this" ilegal?
       scope.$flush();
 
       expect(element.text()).toEqual('1');
@@ -531,16 +532,16 @@ describe("widget", function(){
       var element = jqLite('<ng:include src="url"></ng:include>');
       var scope = angular.compile(element)();
 
-      expect(scope.$childHead).toBeFalsy();
+      expect(scope.$$childHead).toBeFalsy();
 
       scope.url = 'myUrl';
       scope.$service('$xhr.cache').data.myUrl = {value:'my partial'};
       scope.$flush();
-      expect(scope.$childHead).toBeTruthy();
+      expect(scope.$$childHead).toBeTruthy();
 
       scope.url = null;
       scope.$flush();
-      expect(scope.$childHead).toBeFalsy();
+      expect(scope.$$childHead).toBeFalsy();
       dealoc(element);
     });
   });

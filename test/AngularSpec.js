@@ -61,6 +61,7 @@ describe('angular', function(){
     it('should return true if same object', function(){
       var o = {};
       expect(equals(o, o)).toEqual(true);
+      expect(equals(o, {})).toEqual(true);
       expect(equals(1, '1')).toEqual(false);
       expect(equals(1, '2')).toEqual(false);
     });

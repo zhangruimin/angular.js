@@ -5,6 +5,20 @@
 - Added ng:options directive (http://docs.angularjs.org/#!angular.directive.ng:options)
 
 ### Breaking changes
+- Controller constructor functions are now looked up on scope first and then on window.
+- angular.equals now use === which means that things which used to be equal are no longer.
+  Example '0' !== 0 and [] !== ''
+- angular.scope (http://docs.angularjs.org/#!angular.scope) now (providers, cache) instead of
+  (parent, providers, cache)
+- Watch functions (see http://docs.angularjs.org/#!angular.scope.$watch) used to take
+  fn(newValue, oldValue) and be bound to scope, now they take fn(scope, newValue, oldValue)
+- calling $eval() [no args] should be replaced with call to $apply()
+  (http://docs.angularjs.org/#!angular.scope.$apply) ($eval(exp) should remain as is see
+  http://docs.angularjs.org/#!angular.scope.$eval)
+- scope $set/$get have been removed. ($get is same as $eval; no replacement for $set)
+- $route.onChange() callback (http://docs.angularjs.org/#!angular.service.$route)
+  no longer has this bound.
+- Removed undocumented $config in root scope. (You should have not been depending on this.)
 - Dynamic Iteration (ng:repeater) on <option> elements is no longer supported. Use ng:options
 - Removal of index formatter since its only use was with repeated options (see above)
 - $service now has $service.invoke for method injection ($service(self, fn) no longer works)

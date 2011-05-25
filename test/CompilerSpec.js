@@ -31,9 +31,11 @@ describe('compiler', function(){
     };
   });
 
+
   afterEach(function(){
     dealoc(scope);
   });
+
 
   it('should not allow compilation of multiple roots', function(){
     expect(function(){
@@ -43,6 +45,7 @@ describe('compiler', function(){
       return msie ? uppercase(text) : text;
     }
   });
+
 
   it('should recognize a directive', function(){
     var e = jqLite('<div directive="expr" ignore="me"></div>');
@@ -61,13 +64,15 @@ describe('compiler', function(){
     expect(log).toEqual("found:init");
   });
 
+
   it('should recurse to children', function(){
     scope = compile('<div><span hello="misko"/></div>');
     expect(log).toEqual("hello misko");
   });
 
+
   it('should observe scope', function(){
-    scope = compile('<span observe="name"/>');
+    scope = compile('<span observe="name">');
     expect(log).toEqual("");
     scope.$flush();
     scope.name = 'misko';
@@ -79,11 +84,13 @@ describe('compiler', function(){
     expect(log).toEqual(":misko:adam");
   });
 
+
   it('should prevent descend', function(){
     directives.stop = function(){ this.descend(false); };
     scope = compile('<span hello="misko" stop="true"><span hello="adam"/></span>');
     expect(log).toEqual("hello misko");
   });
+
 
   it('should allow creation of templates', function(){
     directives.duplicate = function(expr, element){
@@ -106,6 +113,7 @@ describe('compiler', function(){
     expect(sortedHtml(scope.$element)).toEqual('<div>before<#comment></#comment><span>x</span><span>x</span><span>x</span>after</div>');
   });
 
+
   it('should process markup before directives', function(){
     markup.push(function(text, textNode, parentNode) {
       if (text == 'middle') {
@@ -119,6 +127,7 @@ describe('compiler', function(){
     expect(log).toEqual("hello middle");
   });
 
+
   it('should replace widgets', function(){
     widgets['NG:BUTTON'] = function(element) {
       expect(element.hasClass('ng-widget')).toEqual(true);
@@ -131,6 +140,7 @@ describe('compiler', function(){
     expect(lowercase(scope.$element[0].innerHTML)).toEqual('<div>button</div>');
     expect(log).toEqual('init');
   });
+
 
   it('should use the replaced element after calling widget', function(){
     widgets['H1'] = function(element) {
@@ -149,6 +159,7 @@ describe('compiler', function(){
     scope = compile('<div><h1>ignore me</h1></div>');
     expect(scope.$element.text()).toEqual('3');
   });
+
 
   it('should allow multiple markups per text element', function(){
     markup.push(function(text, textNode, parent){
@@ -172,6 +183,7 @@ describe('compiler', function(){
     scope = compile('A---B---C===D');
     expect(sortedHtml(scope.$element)).toEqual('<div>A<hr></hr>B<hr></hr>C<p></p>D</div>');
   });
+
 
   it('should add class for namespace elements', function(){
     scope = compile('<ng:space>abc</ng:space>');

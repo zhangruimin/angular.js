@@ -808,9 +808,12 @@ angularWidget('ng:include', function(element){
   } else {
     element[0]['ng:compiled'] = true;
     return extend(function(xhr, element){
-      var scope = this, childScope, oldScope;
-      var changeCounter = 0;
-      var releaseScope = noop;
+      var scope = this,
+          changeCounter = 0,
+          releaseScopes = [],
+          childScope,
+          oldScope;
+
       function incrementChange(){ changeCounter++;}
       this.$observe(srcExp, incrementChange);
       this.$observe(function(scope){
@@ -824,16 +827,16 @@ angularWidget('ng:include', function(element){
         var src = scope.$eval(srcExp),
             useScope = scope.$eval(scopeExp);
 
-        releaseScope();
+        while(releaseScopes.length) {
+          releaseScopes.pop().$destroy();
+        }
         if (src) {
           xhr('GET', src, null, function(code, response){
             element.html(response);
             if (useScope) {
               childScope = useScope;
-              releaseScope = noop;
             } else {
-              childScope = scope.$new();
-              releaseScope = bind(childScope, childScope.$destroy);
+              releaseScopes.push(childScope = scope.$new());
             }
             compiler.compile(element)(childScope);
             scope.$eval(onloadExp);
@@ -904,13 +907,14 @@ angularWidget('ng:include', function(element){
 angularWidget('ng:switch', function (element){
   var compiler = this,
       watchExpr = element.attr("on"),
-      changeExpr = element.attr('change') || '',
+      changeExpr = element.attr('change'),
       casesTemplate = {},
       defaultCaseTemplate,
       children = element.children(),
       length = children.length,
       child,
       when;
+
   if (!watchExpr) throw new Error("Missing 'on' attribute.");
   while(length--) {
     child = jqLite(children[length]);
@@ -1055,16 +1059,16 @@ angularWidget('@ng:repeat', function(expression, element){
     valueIdent = match[3] || match[1];
     keyIdent = match[2];
 
-    var scopeChildren = [];
-    var elementChildren = [iterStartElement];
+    var childScopes = [];
+    var childElements = [iterStartElement];
     var parentScope = this;
     this.$observe(function(scope){
       var index = 0,
-          childCount = scopeChildren.length,
+          childCount = childScopes.length,
           collection = scope.$eval(rhs),
           collectionLength = size(collection, true),
           fragment = document.createDocumentFragment(),
-          addFragmentTo,
+          addFragmentTo = (childCount < collectionLength) ? childElements[childCount] : null,
           childScope,
           key;
 
@@ -1072,7 +1076,7 @@ angularWidget('@ng:repeat', function(expression, element){
         if (collection.hasOwnProperty(key)) {
           if (index < childCount) {
             // reuse existing child
-            childScope = scopeChildren[index];
+            childScope = childScopes[index];
             childScope[valueIdent] = collection[key];
             if (keyIdent) childScope[keyIdent] = key;
           } else {
@@ -1084,7 +1088,7 @@ angularWidget('@ng:repeat', function(expression, element){
             childScope.$position = index == 0
                 ? 'first'
                 : (index == collectionLength - 1 ? 'last' : 'middle');
-            scopeChildren.push(childScope);
+            childScopes.push(childScope);
             linker(childScope, function(clone){
               clone.attr('ng:repeat-index', index);
               fragment.appendChild(clone[0]);
@@ -1093,8 +1097,7 @@ angularWidget('@ng:repeat', function(expression, element){
               // The first flush will couse a lot of DOM access (initial)
               // Second flush shuld be noop since nothing has change hence no DOM access.
               childScope.$flush();
-              addFragmentTo = addFragmentTo || elementChildren[index];
-              elementChildren[index + 1] = clone;
+              childElements[index + 1] = clone;
             });
           }
           index ++;
@@ -1103,15 +1106,16 @@ angularWidget('@ng:repeat', function(expression, element){
 
       //attach new nodes buffered in doc fragment
       if (addFragmentTo) {
-        //TODO: This should happend after $flush() is done!
+        //TODO(misko): For performance reasons, we should do the addition after all other widgets
+        // have run. For this should happend after $flush() is done!
         addFragmentTo.after(jqLite(fragment));
       }
 
       // shrink children
-      while(scopeChildren.length > index) {
+      while(childScopes.length > index) {
         // can not use $destroy(true) since  there may be multiple iterators on same parent.
-        scopeChildren.pop().$destroy();
-        elementChildren.pop().remove();
+        childScopes.pop().$destroy();
+        childElements.pop().remove();
       }
     });
   };
@@ -1211,7 +1215,7 @@ angularWidget('ng:view', function(element) {
     return annotate('$xhr.cache', '$route', function($xhr, $route, element){
       var childScope;
       var src;
-      var changeCounter=0;
+      var changeCounter = 0;
 
       $route.onChange(function(){
         if ($route.current) {
@@ -1237,7 +1241,7 @@ angularWidget('ng:view', function(element) {
       });
     });
   } else {
-    this.descend(true);
-    this.directives(true);
+    compiler.descend(true);
+    compiler.directives(true);
   }
 });

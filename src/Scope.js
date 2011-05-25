@@ -1,4 +1,29 @@
-//TODO: I think this should be inlined
+/**
+ * DESIGN NOTES
+ *
+ * The design decisions behind the scope ware heavily favored for speed and memory consumption.
+ *
+ * The typical use of scope is to watch the expressions, which most of the time return the same
+ * value as last time so we optimize the operation.
+ *
+ * Closures construction is expensive from speed as well as memory:
+ *   - no closures, instead ups prototypical inheritance for API
+ *   - Internal state needs to be stored on scope directly, which means that private state is
+ *     exposed as $$____ properties
+ *
+ * Loop operations are optimized by using while(count--) { ... }
+ *   - this means that in order to keep the same order of execution as addition we have to add
+ *     items to the array at the begging (shift) instead of at the end (push)
+ *
+ * Child scopes are created and removed often
+ *   - Using array would be slow since inserts in meddle are expensive so we use linked list
+ *
+ * There are few watches then a lot of  observers. This is why you don't want the observer to be
+ * implemented in the same way as watch. Watch requires return of initialization function which
+ * are expensive to construct.
+ */
+
+
 function createScope(providers, instanceCache) {
   var scope =  new Scope();
   (scope.$service = createInjector(scope, providers, instanceCache)).eager();
@@ -14,7 +39,7 @@ function createScope(providers, instanceCache) {
  * Scope is a JavaScript object and the execution context for {@link guide.expression expressions}.
  * You can think about scopes as JavaScript objects that have extra APIs for registering
  * {@link angular.scope.$watcher watchers} and {@link angular.scope.$observe observers}.
- * A scope is the model in the model-view-controller design pattern.
+ * A scope properties are the model in the model-view-controller design pattern.
  *
  * A few other characteristics of scopes:
  *
@@ -22,10 +47,13 @@ function createScope(providers, instanceCache) {
  * - {@link angular.directive Directives} {@link angular.scope.$observe $observe()} scopes and
  *   update HTML DOM (the view).
  * - A scope {@link angular.scope.$new become} `this` for a controller.
- * - A scope's {@link angular.scope.$apply $apply()} is used to update the listeners
- *   (render the view).
+ * - A scope's {@link angular.scope.$apply $apply()} is used to trigger a new update cycle within
+ *   the scope's life-cycle.
  * - Scopes can {@link angular.scope.$watch $watch()}/{@link angular.scope.$observe $observe()}
  *   properties.
+ *
+ * NOTE: A scope object has some properties starting with `$$` this are meant to be private and
+ *       are not part of the public API, and can change without notice. Do not depend on them.
  *
  * # Scope life-cycle
  *
@@ -82,8 +110,8 @@ function createScope(providers, instanceCache) {
  *
  *
  * # Basic Operations
- * A root scope can be created by calling {@link angular.scope() angular.scope()}. Child scopes
- * are created using the {@link angular.scope.$new() $new()} method.
+ * A root scope can be created by calling {@link angular.scope angular.scope()}. Child scopes
+ * are created using the {@link angular.scope.$new $new()} method.
  * (Most scopes are created automatically when compiled HTML template is executed.)
  *
  * Here is a simple scope snippet to show how you can interact with the scope.
@@ -96,14 +124,14 @@ function createScope(providers, instanceCache) {
 
        scope.$watch('name', function(){
          this.greeting = this.salutation + ' ' + this.name + '!';
-       });
+       }); // initialize the watch
 
-       expect(scope.greeting).toEqual('Hello World!');
+       expect(scope.greeting).toEqual(undefined);
        scope.name = 'Misko';
        // still old value, since watches have not been called yet
-       expect(scope.greeting).toEqual('Hello World!');
+       expect(scope.greeting).toEqual(undefined);
 
-       scope.$digest(); // call the watches
+       scope.$digest(); // fire all  the watches
        expect(scope.greeting).toEqual('Hello Misko!');
  * </pre>
  *
@@ -129,7 +157,8 @@ function createScope(providers, instanceCache) {
  * @param {Object.<string, function()>=} providers Map of service factory which need to be provided
  *     for the current scope. Usually {@link angular.service}.
  * @param {Object.<string, *>=} instanceCache Provides pre-instantiated services which should
- *     append/override services provided by `providers`.
+ *     append/override services provided by `providers`. This is handy when unit-testing and having
+ *     the need to override a default service.
  * @returns {Object} Newly created scope.
  *
  *
@@ -173,14 +202,16 @@ function createScope(providers, instanceCache) {
  */
 function Scope(){
   this.$id = nextUid();
-  this.$parent = this.$watchers = this.$observers = this.$nextSibling = this.$childHead = this.$childTail = null;
+  this.$$phase = this.$parent = this.$$watchers = this.$$observers =
+    this.$$nextSibling = this.$$childHead = this.$$childTail = null;
   this['this'] = this.$root =  this;
 }
 /**
  * @workInProgress
  * @ngdoc property
  * @name angular.scope.$id
- * @returns {number} Unique scope ID useful for debugging.
+ * @returns {number} Unique scope ID (monotonically increasing alphanumeric sequence) useful for
+ *   debugging.
  */
 
 /**
@@ -201,14 +232,14 @@ function Scope(){
  * @workInProgress
  * @ngdoc property
  * @name angular.scope.$root
- * @returns {scope} The root scope of the current scope hierarchy.
+ * @returns {Scope} The root scope of the current scope hierarchy.
  */
 
 /**
  * @workInProgress
  * @ngdoc property
  * @name angular.scope.$parent
- * @returns {scope} The parent scope of the current scope.
+ * @returns {Scope} The parent scope of the current scope.
  */
 
 
@@ -225,26 +256,33 @@ Scope.prototype = {
    * {@link angular.scope.$flush $flush()} events. The scope can be removed from the scope
    * hierarchy using {@link angular.scope.$destroy $destroy()}.
    *
+   * {@link angular.scope.$destroy $destroy()} must be called on a scope when it is desired for
+   * the scope and its child scopes to be permanently detached from the parent and thus stop
+   * participating in model change detection and listener notification by invoking.
+   *
    * @param {function()=} constructor Constructor function which the scope should behave as.
-   * @param {*=} ... Any additional arguments which are curried into the constructor.
+   * @param {curryArguments=} ... Any additional arguments which are curried into the constructor.
    *        See {@link guide.di dependency injection}.
    * @returns {Object} The newly created child scope.
    *
    */
-  $new: function(Class){
-    var Child = function(){}; // should be anonymous;
+  $new: function(Class, curryArguments){
+    var Child = function(){}; // should be anonymous; This is so that when the minifier munges
+      // the name it does not become random set of chars. These will then show up as class
+      // name in the debugger.
     var child;
     Child.prototype = this;
     child = new Child();
     child['this'] = child;
     child.$parent = this;
     child.$id = nextUid();
-    child.$watchers = child.$observers = child.$nextSibling = child.$childHead = child.$childTail = null;
-    if (this.$childHead) {
-      this.$childTail.$nextSibling = child;
-      this.$childTail = child;
+    child.$$phase = child.$$watchers = child.$$observers =
+      child.$$nextSibling = child.$$childHead = child.$$childTail = null;
+    if (this.$$childHead) {
+      this.$$childTail.$$nextSibling = child;
+      this.$$childTail = child;
     } else {
-      this.$childHead = this.$childTail = child;
+      this.$$childHead = this.$$childTail = child;
     }
     // short circuit if we have no class
     if (Class) {
@@ -253,7 +291,7 @@ Scope.prototype = {
       for(var key in ClassPrototype) {
         child[key] = bind(child, ClassPrototype[key]);
       }
-      this.$service.invoke(child, Class);
+      this.$service.invoke(child, Class, curryArguments);
     }
     return child;
   },
@@ -268,13 +306,17 @@ Scope.prototype = {
    * Registers a `listener` callback to be executed whenever the `watchExpression` changes.
    *
    * - The `watchExpression` is called on every call to {@link angular.scope.$digest $digest()} and
-   *   should return the value which will be watched.
+   *   should return the value which will be watched. (Since {@link angular.scope.$digest $digest()}
+   *   reruns when it detects changes the `watchExpression` can execute multiple times per
+   *   {@link angular.scope.$digest $digest()} and should be idempotent.)
    * - The `listener` is called only when the value from the current `watchExpression` and the
-   *   previous call to `watchExpression' are not equal.
-   * - The watch `listener` may change the model, which may trigger other `listener`s to fire.
-   * - The `$watch()` achieves this by keeping a previous copy of the value and comparing it to
-   *   the current property value. For non-primitive values the {@link angular.copy} and
-   *   {@link angular.equals} are used.
+   *   previous call to `watchExpression' are not equal. The inequality is determined according to
+   *   {@link angular.equals} function. To save the value of the object for later comparison
+   *   {@link angular.copy} function is used. It also means that watching complex options will
+   *   have adverse memory and performance implications.
+   * - The watch `listener` may change the model, which may trigger other `listener`s to fire. This
+   *   is achieving my rerunning the watchers until no changes are detected. The rerun iteration
+   *   limit is 100 to prevent infinity loop deadlock.
    *
    * # When to use `$watch`?
    *
@@ -282,10 +324,14 @@ Scope.prototype = {
    * a stimulus is applied to the system (see {@link angular.scope.$apply $apply()}). This is in
    * contrast to {@link angular.scope.$observe $observe()} which is used from within the directives
    * and which gets applied at some later point in time. In addition
-   * {@link angular.scope.$observe $observe()} should not modify the model.
+   * {@link angular.scope.$observe $observe()} must not modify the model.
    *
    * If you want to be notified whenever {@link angular.scope.$digest $digest} is called,
-   * you can register an `watchExpression` function with no `listener`.
+   * you can register an `watchExpression` function with no `listener`. (Since `watchExpression`,
+   * can execute multiple times per {@link angular.scope.$digest $digest} cycle when a change is
+   * detected, be prepared for multiple calls to your listener.)
+   *
+   * # `$watch` vs `$observe`
    *
    * <table class="table">
    *   <tr>
@@ -293,25 +339,48 @@ Scope.prototype = {
    *     <th>{@link angular.scope.$watch $watch()}</th>
    *     <th>{@link angular.scope.$observe $observe()}</th>
    *   </tr>
+   *   <tr><th colspan="3" class="section">When to use it?</th></tr>
    *   <tr>
-   *     <th>Execution</th>
-   *     <td>immediately after {@link angular.scope.$apply $apply()}</td>
-   *     <td>scheduled at some future time. See {@link angular.service.$updateView $updateView}</td>
-   *   </tr>
-   *   <tr>
-   *     <th>Model mutation</th>
-   *     <td>allowed, (rerun {@link angular.scope.$digest $digest()} until no further changes to model)</td>
-   *     <td>not-allowed, must be {@link http://en.wikipedia.org/wiki/Idempotence idempotent}</td>
+   *     <th>Purpose</th>
+   *     <td>Application behavior (including further model mutation) in response to a model
+   *         mutation.</td>
+   *     <td>Update the DOM in response to a model mutation.</td>
    *   </tr>
    *   <tr>
    *     <th>Used from</th>
    *     <td>{@link angular.directive.ng:controller controller}</td>
    *     <td>{@link angular.directive directives}</td>
    *   </tr>
+   *   <tr><th colspan="3" class="section">What fires listeners?</th></tr>
    *   <tr>
-   *     <th>Triggered by</th>
+   *     <th>Directly</th>
    *     <td>{@link angular.scope.$digest $digest()}</td>
    *     <td>{@link angular.scope.$flush $flush()}</td>
+   *   </tr>
+   *   <tr>
+   *     <th>Indirectly via {@link angular.scope.$apply $apply()}</th>
+   *     <td>{@link angular.scope.$apply $apply} calls
+   *         {@link angular.scope.$digest $digest()} after apply argument executes.</td>
+   *     <td>{@link angular.scope.$apply $apply} schedules
+   *         {@link angular.scope.$flush $flush()} at some future time via
+   *         {@link angular.service.$updateView $updateView}</td>
+   *   </tr>
+   *   <tr><th colspan="3" class="section">API contract</th></tr>
+   *   <tr>
+   *     <th>Model mutation</th>
+   *     <td>allowed: detecting mutations requires one or mare calls to `watchExpression' per
+   *         {@link angular.scope.$digest $digest()} cycle</td>
+   *     <td>not allowed: called once per {@link angular.scope.$flush $flush()} must be
+   *         {@link http://en.wikipedia.org/wiki/Idempotence idempotent}
+   *         (function without side-effects which can be called multiple times.)</td>
+   *   </tr>
+   *   <tr>
+   *     <th>Initial Value</th>
+   *     <td>uses the current value of `watchExpression` as the initial value. Does not fire on
+   *         initial call to {@link angular.scope.$digest $digest()}, unless `watchExpression` has
+   *         changed form the initial value.</td>
+   *     <td>fires on first run of {@link angular.scope.$flush $flush()} regardless of value of
+   *         `observeExpression`</td>
    *   </tr>
    * </table>
    *
@@ -324,7 +393,7 @@ Scope.prototype = {
        scope.counter = 0;
 
        expect(scope.counter).toEqual(0);
-       scope.$watch('name', 'counter = counter + 1');
+       scope.$watch('name', function(scope, newValue, oldValue) { counter = counter + 1; });
        expect(scope.counter).toEqual(0);
 
        scope.$digest();
@@ -338,38 +407,38 @@ Scope.prototype = {
    *
    *
    *
-   * @param {function()|string} watchExpression Expression that is evaluated on each
+   * @param {(function()|string)} watchExpression Expression that is evaluated on each
    *    {@link angular.scope.$digest $digest} cycle. A change in the return value triggers a
    *    call to the `listener`.
    *
    *    - `string`: Evaluated as {@link guide.expression expression}
    *    - `function(scope)`: called with current `scope` as a parameter.
-   * @param {function()|string=} listener Callback called whenever the return value of
+   * @param {(function()|string)=} listener Callback called whenever the return value of
    *   the `watchExpression` changes.
    *
    *    - `string`: Evaluated as {@link guide.expression expression}
    *    - `function(scope, newValue, oldValue)`: called with current `scope` an previous and
    *       current values as parameters.
-   * @returns {function()} callback function bound to the current scope. Useful for calling the
-   *    unbound `listener` function for initialization. The `listener` function will get called
-   *    with the current scope and the current value of the expression.
+   * @returns {function()} a function which will call the `listener` with apprariate arguments.
+   *    Useful for forcing initialization of listener.
    */
   $watch: function(watchExp, listener){
     var scope = this;
     var get = compileToFn(watchExp, 'watch');
     var listenFn = compileToFn(listener || noop, 'listener');
-    var array = scope.$watchers;
+    var array = scope.$$watchers;
     if (!array) {
-      array = scope.$watchers = [];
+      array = scope.$$watchers = [];
     }
-    // we use unshift since we use a while loop for speed.
+    // we use unshift since we use a while loop in $digest for speed.
     // the while loop reads in reverse order.
     array.unshift({
       fn: listenFn,
       last: copy(get(scope)),
       get: get
     });
-    // we only do this on watches, since it may be expensive for $eval and it will not be needed
+    // we only return the initialization function for $watch (not for $observe), since creating
+    // function cost time and memory, and $observe functions do not need it.
     return function(){
       var value = get(scope);
       listenFn(scope, value, value);
@@ -398,7 +467,8 @@ Scope.prototype = {
    * you can register a `watchExpression` function  with {@link angular.scope.$watch $watch()}
    * with no `listener`.
    *
-   * You may have a need to call `$digest()` from within unit-tests.
+   * You may have a need to call `$digest()` from within unit-tests, to simulate the scope
+   * life-cycle.
    *
    * # Example
      <pre>
@@ -407,7 +477,7 @@ Scope.prototype = {
        scope.counter = 0;
 
        expect(scope.counter).toEqual(0);
-       scope.$flush('name', 'counter = counter + 1');
+       scope.$flush('name', function(scope, newValue, oldValue) { counter = counter + 1; });
        expect(scope.counter).toEqual(0);
 
        scope.$flush();
@@ -423,23 +493,24 @@ Scope.prototype = {
    *
    */
   $digest: function(){
-    var watches = this.$watchers,
-        child,
-        length,
+    var child,
         watch, value, last,
-        count=0, iterationCount, ttl=100;
-    if (this.hasOwnProperty('$phase')) {
-      throw new Error(this.$phase + ' already in progress');
+        watchers = this.$$watchers,
+        length, count=0,
+        iterationCount, ttl=100;
+
+    if (this.$$phase) {
+      throw Error(this.$$phase + ' already in progress');
     }
-    this.$phase = '$digest';
+    this.$$phase = '$digest';
     do {
       iterationCount = 0;
-      if (watches){
+      if (watchers){
         // process our watches
-        length = watches.length;
+        length = watchers.length;
         while (length--) {
           try {
-            watch = watches[length];
+            watch = watchers[length];
             // Most common watches are on primitives, in which case we can short
             // circuit it with === operator, only when === fails do we use .equals
             if ((value = watch.get(this)) !== (last = watch.last) && !equals(value, last)) {
@@ -451,17 +522,17 @@ Scope.prototype = {
           }
         }
       }
-      child = this.$childHead;
+      child = this.$$childHead;
       while(child) {
         iterationCount += child.$digest();
-        child = child.$nextSibling;
+        child = child.$$nextSibling;
       }
       count += iterationCount;
       if(!(ttl--)) {
-        throw new Error('Maximum iteration limit exceeded.');
+        throw Error('100 $digest() iterations reached. Aborting!');
       }
     } while (iterationCount);
-    delete this.$phase;
+    this.$$phase = null;
     return count;
   },
 
@@ -472,20 +543,21 @@ Scope.prototype = {
    * @function
    *
    * @description
-   * Registers a `listener` callback to be executed whenever the `observeExpression` changes.
+   * Registers a `listener` callback to be executed during the {@link angular.scope.$flush $flush()}
+   * phase when the `observeExpression` changes..
    *
    * - The `observeExpression` is called on every call to {@link angular.scope.$flush $flush()} and
    *   should return the value which will be observed.
    * - The `listener` is called only when the value from the current `observeExpression` and the
-   *   previous call to `observeExpression' are not equal.
-   * - The `$observe()` achieves this by keeping a previous copy of the value and comparing it to
-   *   the current property value. For non-primitive values the {@link angular.copy} and
-   *   {@link angular.equals} are used.
+   *   previous call to `observeExpression' are not equal. The inequality is determined according to
+   *   {@link angular.equals} function. To save the value of the object for later comparison
+   *   {@link angular.copy} function is used. It also means that watching complex options will
+   *   have adverse memory and performance implications.
    *
    * # When to use `$observe`?
    *
    * {@link angular.scope.$observe $observe()} is used from within directives and gets applied at
-   * some later point in time. In addition {@link angular.scope.$observe $observe()} should not
+   * some later point in time. Addition {@link angular.scope.$observe $observe()} must not
    * modify the model. This is in contrast to {@link angular.scope.$watch $watch()} which should be
    * used from within controllers to trigger a callback *immediately* after a stimulus is applied
    * to the system (see {@link angular.scope.$apply $apply()}).
@@ -494,31 +566,56 @@ Scope.prototype = {
    * you can register an `observeExpression` function with no `listener`.
    *
    *
+   * # `$watch` vs `$observe`
+   *
    * <table class="table">
    *   <tr>
    *     <th></td>
    *     <th>{@link angular.scope.$watch $watch()}</th>
    *     <th>{@link angular.scope.$observe $observe()}</th>
    *   </tr>
+   *   <tr><th colspan="3" class="section">When to use it?</th></tr>
    *   <tr>
-   *     <th>Execution</th>
-   *     <td>immediately after {@link angular.scope.$apply $apply()}</td>
-   *     <td>scheduled at some future time. See {@link angular.service.$updateView $updateView}</td>
-   *   </tr>
-   *   <tr>
-   *     <th>Model mutation</th>
-   *     <td>allowed, (rerun {@link angular.scope.$digest $digest()} until no further changes to model)</td>
-   *     <td>not-allowed, must be {@link http://en.wikipedia.org/wiki/Idempotence idempotent}</td>
+   *     <th>Purpose</th>
+   *     <td>Application behavior (including further model mutation) in response to a model
+   *         mutation.</td>
+   *     <td>Update the DOM in response to a model mutation.</td>
    *   </tr>
    *   <tr>
    *     <th>Used from</th>
    *     <td>{@link angular.directive.ng:controller controller}</td>
    *     <td>{@link angular.directive directives}</td>
    *   </tr>
+   *   <tr><th colspan="3" class="section">What fires listeners?</th></tr>
    *   <tr>
-   *     <th>Triggered by</th>
+   *     <th>Directly</th>
    *     <td>{@link angular.scope.$digest $digest()}</td>
    *     <td>{@link angular.scope.$flush $flush()}</td>
+   *   </tr>
+   *   <tr>
+   *     <th>Indirectly via {@link angular.scope.$apply $apply()}</th>
+   *     <td>{@link angular.scope.$apply $apply} calls
+   *         {@link angular.scope.$digest $digest()} after apply argument executes.</td>
+   *     <td>{@link angular.scope.$apply $apply} schedules
+   *         {@link angular.scope.$flush $flush()} at some future time via
+   *         {@link angular.service.$updateView $updateView}</td>
+   *   </tr>
+   *   <tr><th colspan="3" class="section">API contract</th></tr>
+   *   <tr>
+   *     <th>Model mutation</th>
+   *     <td>allowed: detecting mutations requires one or mare calls to `watchExpression' per
+   *         {@link angular.scope.$digest $digest()} cycle</td>
+   *     <td>not allowed: called once per {@link angular.scope.$flush $flush()} must be
+   *         {@link http://en.wikipedia.org/wiki/Idempotence idempotent}
+   *         (function without side-effects which can be called multiple times.)</td>
+   *   </tr>
+   *   <tr>
+   *     <th>Initial Value</th>
+   *     <td>uses the current value of `watchExpression` as the initial value. Does not fire on
+   *         initial call to {@link angular.scope.$digest $digest()}, unless `watchExpression` has
+   *         changed form the initial value.</td>
+   *     <td>fires on first run of {@link angular.scope.$flush $flush()} regardless of value of
+   *         `observeExpression`</td>
    *   </tr>
    * </table>
    *
@@ -529,7 +626,7 @@ Scope.prototype = {
        scope.counter = 0;
 
        expect(scope.counter).toEqual(0);
-       scope.$flush('name', 'counter = counter + 1');
+       scope.$flush('name', function(scope, newValue, oldValue) { counter = counter + 1; });
        expect(scope.counter).toEqual(0);
 
        scope.$flush();
@@ -541,13 +638,13 @@ Scope.prototype = {
        expect(scope.counter).toEqual(1);
      </pre>
    *
-   * @param {function()|string} observeExpression Expression that is evaluated on each
+   * @param {(function()|string)} observeExpression Expression that is evaluated on each
    *    {@link angular.scope.$flush $flush} cycle. A change in the return value triggers a
    *    call to the `listener`.
    *
    *    - `string`: Evaluated as {@link guide.expression expression}
    *    - `function(scope)`: called with current `scope` as a parameter.
-   * @param {function()|string=} listener Callback called whenever the return value of
+   * @param {(function()|string)=} listener Callback called whenever the return value of
    *   the `observeExpression` changes.
    *
    *    - `string`: Evaluated as {@link guide.expression expression}
@@ -555,15 +652,16 @@ Scope.prototype = {
    *       current values as parameters.
    */
   $observe: function(watchExp, listener){
-    var array = this.$observers;
+    var array = this.$$observers;
+
     if (!array) {
-      array = this.$observers = [];
+      array = this.$$observers = [];
     }
-    // we use unshift since we use a while loop for speed.
+    // we use unshift since we use a while loop in $flush for speed.
     // the while loop reads in reverse order.
     array.unshift({
       fn: compileToFn(listener || noop, 'listener'),
-      last: {},
+      last: NaN,
       get:  compileToFn(watchExp, 'watch')
     });
   },
@@ -588,7 +686,8 @@ Scope.prototype = {
    * you can register a `observeExpression` function  with {@link angular.scope.$observe $observe()}
    * with no `listener`.
    *
-   * You may have a need to call `$flush()` from within unit-tests.
+   * You may have a need to call `$flush()` from within unit-tests, to simulate the scope
+   * life-cycle.
    *
    * # Example
      <pre>
@@ -597,7 +696,7 @@ Scope.prototype = {
        scope.counter = 0;
 
        expect(scope.counter).toEqual(0);
-       scope.$flush('name', 'counter = counter + 1');
+       scope.$flush('name', function(scope, newValue, oldValue) { counter = counter + 1; });
        expect(scope.counter).toEqual(0);
 
        scope.$flush();
@@ -611,14 +710,15 @@ Scope.prototype = {
    *
    */
   $flush: function(){
-    var observers = this.$observers,
+    var observers = this.$$observers,
         child,
         length,
         observer, value, last;
-    if (this.hasOwnProperty('$phase')) {
-      throw new Error(this.$phase + ' already in progress');
+
+    if (this.$$phase) {
+      throw Error(this.$$phase + ' already in progress');
     }
-    this.$phase = '$flush';
+    this.$$phase = '$flush';
     if (observers){
       // process our watches
       length = observers.length;
@@ -636,12 +736,12 @@ Scope.prototype = {
       }
     }
     // observers can create new children
-    child = this.$childHead;
+    child = this.$$childHead;
     while(child) {
       child.$flush();
-      child = child.$nextSibling;
+      child = child.$$nextSibling;
     }
-    delete this.$phase;
+    this.$$phase = null;
   },
 
   /**
@@ -663,27 +763,27 @@ Scope.prototype = {
   $destroy: function(){
     if (this.$root == this) return; // we can't remove the root node;
     var parent = this.$parent;
-    var child = parent.$childHead;
+    var child = parent.$$childHead;
     var lastChild = null;
     var nextChild = null;
     // We have to do a linear search, since we don't have doubly link list.
-    // But this is intentional since removal are rare, and doubly link list is not free.
+    // But this is intentional since removals are rare, and doubly link list is not free.
     while(child) {
       if (child == this) {
-        nextChild = child.$nextSibling;
-        if (parent.$childHead == child) {
-          parent.$childHead = nextChild;
+        nextChild = child.$$nextSibling;
+        if (parent.$$childHead == child) {
+          parent.$$childHead = nextChild;
         }
         if (lastChild) {
-          lastChild.$nextSibling = nextChild;
+          lastChild.$$nextSibling = nextChild;
         }
-        if (parent.$childTail == child) {
-          parent.$childTail = lastChild;
+        if (parent.$$childTail == child) {
+          parent.$$childTail = lastChild;
         }
         return; // stop iterating we found it
       } else {
         lastChild = child;
-        child = child.$nextSibling;
+        child = child.$$nextSibling;
       }
     }
   },
@@ -696,7 +796,7 @@ Scope.prototype = {
    *
    * @description
    * Executes the expression on the current scope returning the result. Any exceptions in the
-   * expression are propagated (uncaught).
+   * expression are propagated (uncaught). This is useful when evaluating engular expressions.
    *
    * # Example
      <pre>
@@ -705,7 +805,7 @@ Scope.prototype = {
        scope.b = 2;
 
        expect(scope.$eval('a+b')).toEqual(3);
-       expect(scope.$eval(function(){ return this.a + this.b; })).toEqual(3);
+       expect(scope.$eval(function(scope){ return scope.a + scope.b; })).toEqual(3);
      </pre>
    *
    * @param {(string|function())=} expression An angular expression to be executed.

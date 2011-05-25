@@ -663,54 +663,59 @@ function parser(text, json){
 // Parser helper functions
 //////////////////////////////////////////////////
 
-function setter(instance, path, value){
+function setter(obj, path, setValue){
   var element = path.split('.');
   for ( var i = 0; element.length > 1; i++) {
     var key = element.shift();
-    var newInstance = instance[key];
-    if (!newInstance) {
-      newInstance = {};
-      instance[key] = newInstance;
+    var propertyObj = obj[key];
+    if (!propertyObj) {
+      propertyObj = {};
+      obj[key] = propertyObj;
     }
-    instance = newInstance;
+    obj = propertyObj;
   }
-  instance[element.shift()] = value;
-  return value;
+  obj[element.shift()] = setValue;
+  return setValue;
 }
 
-function getter(instance, path, unboundFn) {
-  if (!path) return instance;
-  var element = path.split('.');
+/**
+ * Return the value accesible from the object by path. Any undefined traversals are ignored
+ * @param {Object} obj starting object
+ * @param {string} path path to traverse
+ * @param {boolean=true} bindFnToScope
+ * @returns value as accesbile by path
+ */
+function getter(obj, path, bindFnToScope) {
+  if (!path) return obj;
+  var keys = path.split('.');
   var key;
-  var lastInstance = instance;
-  var len = element.length;
-  for ( var i = 0; i < len; i++) {
-    key = element[i];
-    if (!key.match(/^[\$\w][\$\w\d]*$/))
-        throw "Expression '" + path + "' is not a valid expression for accesing variables.";
-    if (instance) {
-      lastInstance = instance;
-      instance = instance[key];
+  var lastInstance = obj;
+  var len = keys.length;
+
+  for (var i = 0; i < len; i++) {
+    key = keys[i];
+    if (obj) {
+      obj = (lastInstance = obj)[key];
     }
-    if (isUndefined(instance)  && key.charAt(0) == '$') {
-      var type = angular['Global']['typeOf'](lastInstance);
+    if (isUndefined(obj)  && key.charAt(0) == '$') {
+      var type = angularGlobal.typeOf(lastInstance);
       type = angular[type.charAt(0).toUpperCase()+type.substring(1)];
       var fn = type ? type[[key.substring(1)]] : _undefined;
       if (fn) {
-        instance = bind(lastInstance, fn, lastInstance);
-        return instance;
+        return obj = bind(lastInstance, fn, lastInstance);
       }
     }
   }
-  if (!unboundFn && isFunction(instance)) {
-    return bind(lastInstance, instance);
+  if (!bindFnToScope && isFunction(obj)) {
+    return bind(lastInstance, obj);
   }
-  return instance;
+  return obj;
 }
 
 var getterFnCache = {},
     compileCache = {},
     JS_KEYWORDS = {};
+
 forEach(
     ("abstract,boolean,break,byte,case,catch,char,class,const,continue,debugger,default," +
     "delete,do,double,else,enum,export,extends,false,final,finally,float,for,function,goto," +
@@ -730,14 +735,16 @@ function getterFn(path){
     code += 'if(!s) return s;\n' +
             'l=s;\n' +
             's=s' + key + ';\n' +
-            'if(typeof s=="function" && !(s instanceof RegExp)) s = function(){ return l'+key+'.apply(l, arguments); };\n';
+            'if(typeof s=="function" && !(s instanceof RegExp)) s = function(){ return l' +
+              key + '.apply(l, arguments); };\n';
     if (key.charAt(1) == '$') {
       // special code for super-imposed functions
       var name = key.substr(2);
       code += 'if(!s) {\n' +
-              '  t = angular.Global.typeOf(l);\n' +
-              '  fn = (angular[t.charAt(0).toUpperCase() + t.substring(1)]||{})["' + name + '"];\n' +
-              '  if (fn) s = function(){ return fn.apply(l, [l].concat(Array.prototype.slice.call(arguments, 0, arguments.length))); };\n' +
+              ' t = angular.Global.typeOf(l);\n' +
+              ' fn = (angular[t.charAt(0).toUpperCase() + t.substring(1)]||{})["' + name + '"];\n' +
+              ' if (fn) s = function(){ return fn.apply(l, ' +
+                   '[l].concat(Array.prototype.slice.call(arguments, 0, arguments.length))); };\n' +
               '}\n';
     }
   });
@@ -750,12 +757,13 @@ function getterFn(path){
 
 ///////////////////////////////////
 
-//TODO: Should this function be public?
+//TODO(misko): Should this function be public?
 function compileExpr(expr) {
   return parser(expr).statements();
 }
 
-//TODO: Deprecate? Remove!
+//TODO(misko): Deprecate? Remove!
+// I think that compilation should be a service.
 function expressionCompile(exp){
   if (typeof exp === $function) return exp;
   var fn = compileCache[exp];

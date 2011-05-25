@@ -123,10 +123,7 @@ angularDirective("ng:controller", function(expression){
     var Controller =
       getter(scope, expression, true) ||
       getter(window, expression, true);
-    if (!Controller)
-      throw "Can not find '"+expression+"' controller.";
-    if (!isFunction(Controller))
-      throw "Reference '"+expression+"' is not a class.";
+    assertArgFn(Controller, expression);
     return Controller;
   });
   return noop;
@@ -134,6 +131,7 @@ angularDirective("ng:controller", function(expression){
 
 /**
  * @workInProgress
+ * @deprecated
  * @ngdoc directive
  * @name angular.directive.ng:eval
  *
@@ -215,11 +213,11 @@ angularDirective("ng:bind", function(expression, element){
   return function(element) {
     var lastValue = noop, lastError = noop;
     this.$observe(function(scope) {
-      // TODO: remove error handling
+      // TODO: remove error handling https://github.com/angular/angular.js/issues/347
       var error, value, html, isHtml, isDomElement,
           hadOwnElement = scope.hasOwnProperty('$element'),
           oldElement = scope.$element;
-      // TODO: get rid of $element
+      // TODO: get rid of $element https://github.com/angular/angular.js/issues/348
       scope.$element = element;
       try {
         value = scope.$eval(expression);
@@ -291,7 +289,7 @@ function compileBindTemplate(template){
       // TODO: get rid of $element
       scope.$element = element;
       try {
-        for ( var i = 0; i < bindings.length; i++) {
+        for (var i = 0; i < bindings.length; i++) {
           var value = bindings[i](scope, element);
           if (isElement(value))
             value = '';

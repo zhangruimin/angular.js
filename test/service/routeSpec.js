@@ -126,24 +126,24 @@ describe('$route', function() {
 
     $location.updateHash('/foo');
     scope.$digest();
-    expect(scope.$childHead).toBeTruthy();
-    expect(scope.$childHead).toEqual(scope.$childTail);
+    expect(scope.$$childHead).toBeTruthy();
+    expect(scope.$$childHead).toEqual(scope.$$childTail);
 
     $location.updateHash('/bar');
     scope.$digest();
-    expect(scope.$childHead).toBeTruthy();
-    expect(scope.$childHead).toEqual(scope.$childTail);
+    expect(scope.$$childHead).toBeTruthy();
+    expect(scope.$$childHead).toEqual(scope.$$childTail);
     return
 
     $location.updateHash('/baz');
     scope.$digest();
-    expect(scope.$childHead).toBeTruthy();
-    expect(scope.$childHead).toEqual(scope.$childTail);
+    expect(scope.$$childHead).toBeTruthy();
+    expect(scope.$$childHead).toEqual(scope.$$childTail);
 
     $location.updateHash('/');
     scope.$digest();
-    expect(scope.$childHead).toEqual(null);
-    expect(scope.$childTail).toEqual(null);
+    expect(scope.$$childHead).toEqual(null);
+    expect(scope.$$childTail).toEqual(null);
   });
 
 

@@ -570,6 +570,16 @@ function isLeafNode (node) {
 }
 
 /**
+ * @workInProgress
+ * @ngdoc function
+ * @name angular.copy
+ * @function
+ *
+ * @description
+ * Alias for {@link angular.Object.copy}
+ */
+
+/**
  * @ngdoc function
  * @name angular.Object.copy
  * @function
@@ -653,6 +663,15 @@ function copy(source, destination){
   return destination;
 }
 
+/**
+ * @workInProgress
+ * @ngdoc function
+ * @name angular.equals
+ * @function
+ *
+ * @description
+ * Alias for {@link angular.Object.equals}
+ */
 
 /**
  * @ngdoc function
@@ -775,6 +794,10 @@ function concat(array1, array2, index) {
   return array1.concat(slice.call(array2, index, array2.length));
 }
 
+function sliceArgs(args, startIndex) {
+  return slice.call(args, startIndex || 0, args.length);
+}
+
 
 /**
  * @workInProgress
@@ -794,7 +817,7 @@ function concat(array1, array2, index) {
  */
 function bind(self, fn) {
   var curryArgs = arguments.length > 2
-    ? slice.call(arguments, 2, arguments.length)
+    ? sliceArgs(arguments, 2)
     : [];
   if (typeof fn == $function && !(fn instanceof RegExp)) {
     return curryArgs.length
@@ -1130,5 +1153,6 @@ function assertArg(arg, name, reason) {
 }
 
 function assertArgFn(arg, name) {
-  assertArg(isFunction(arg), name, 'not a function, got  ' + (typeof arg));
+  assertArg(isFunction(arg), name, 'not a function, got  ' +
+      (typeof arg == 'object' ? arg.constructor.name : typeof arg));
 };
