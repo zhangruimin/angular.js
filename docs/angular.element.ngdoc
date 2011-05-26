@@ -32,6 +32,7 @@ raw DOM references.
 - [data()](http://api.jquery.com/data/)
 - [hasClass()](http://api.jquery.com/hasClass/)
 - [parent()](http://api.jquery.com/parent/)
+- [prepend()](http://api.jquery.com/prepend/)
 - [remove()](http://api.jquery.com/remove/)
 - [removeAttr()](http://api.jquery.com/removeAttr/)
 - [removeClass()](http://api.jquery.com/removeClass/)

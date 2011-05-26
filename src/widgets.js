@@ -541,16 +541,22 @@ angularWidget('button', inputWidgetSelector);
  * @name angular.directive.ng:options
  *
  * @description
- * Dynamically generate a list of `option`s for a `<select>` element. Normaly the 'ng:options'
- * directive does not require you to specify any `<option>` elements, however if you wish
- * to support `null` value then a special `<option value="">null selection text</option>` can be
- * added to the `<select>`.
+ * Replace this whole paragraph with:
  *
- * NOTE: The normal aproach of {@link angular.widget.@ng:repeat ng:repeat} does not work here for
- * several reasons:
+ * Dynamically generate a list of `<option>` elements for a `<select>` element using the array
+ * obtained by evaluating the `ng:options` expression.
  *
- *   * option requires strings, where as dynamic arrays are composed of objects.
- *   * {@link angular.widget.@ng:repeat ng:repeat} unrolles after the select binds causing
+ * Optionally, a single hard-coded `<option>` element, with the value set to an empty string, can
+ * be nested into the `<select>` element. This element will then represent `null` or "not selected"
+ * option. See example below for demonstration.
+ *
+ * Note: `ng:options` provides iterator facility for `<option>` element which must be used instead
+ * of {@link angular.widget.@ng:repeat ng:repeat}. `ng:repeat` is not suitable for use with
+ * `<option>` element because of the following reasons:
+ *
+ *   * `option` value attribuet requires a string, where as the array we are trying to unroll is
+ *     composed of objects.
+ *   * {@link angular.widget.@ng:repeat ng:repeat} unrolls after the select binds causing
  *     incorect rendering on most browsers.
  *   * binding to a value not in list confuses most browsers.
  *
@@ -614,6 +620,7 @@ angularWidget('button', inputWidgetSelector);
 var NG_OPTIONS_REGEXP = /^(.*)\s+for\s+([\$\w][\$\w\d]*)\s+in\s+(.*)$/;
 angularWidget('select', function(element){
   this.descend(true);
+  this.directives(true);
   var isMultiselect = element.attr('multiple');
   var expression = element.attr('ng:options');
   var match;
@@ -660,7 +667,7 @@ angularWidget('select', function(element){
         if (value == '?') {
           value = undefined;
         } else {
-          value = value == '' ? null : collection[value];
+          value = (value == '' ? null : collection[value]);
         }
       }
       if (value !== undefined) model.set(value);
@@ -680,6 +687,7 @@ angularWidget('select', function(element){
       var currentItem;
       var selectValue = '';
       var isMulti = isMultiselect;
+
       if (isMulti) {
         selectValue = new HashMap();
         if (modelValue && isNumber(length = modelValue.length)) {

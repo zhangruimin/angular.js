@@ -586,8 +586,8 @@ describe("widget", function(){
 
     function createSelect(multiple, blank, unknown){
       select = jqLite(
-          '<select' + (multiple ? ' multiple' : '') +
-                 ' name="selected" ng:options="value.name for value in values">' +
+          '<select name="selected" ' + (multiple ? ' multiple' : '') +
+                 ' ng:options="value.name for value in values">' +
             (blank ? '<option value="">blank</option>' : '') +
             (unknown ? '<option value="?">unknown</option>' : '') +
           '</select>');
@@ -631,7 +631,7 @@ describe("widget", function(){
       createSingleSelect();
       scope.values = [];
       scope.$flush();
-      expect(select.find('option').length).toEqual(1); // becouse we add special empty option
+      expect(select.find('option').length).toEqual(1); // because we add special empty option
       expect(sortedHtml(select.find('option')[0])).toEqual('<option></option>');
 
       scope.values.push({name:'A'});
@@ -639,7 +639,6 @@ describe("widget", function(){
       scope.$flush();
       expect(select.find('option').length).toEqual(1);
       expect(sortedHtml(select.find('option')[0])).toEqual('<option value="0">A</option>');
-
 
       scope.values.push({name:'B'});
       scope.$flush();
