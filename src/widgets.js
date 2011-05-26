@@ -541,10 +541,11 @@ angularWidget('button', inputWidgetSelector);
  * @name angular.directive.ng:options
  *
  * @description
- * Replace this whole paragraph with:
- *
  * Dynamically generate a list of `<option>` elements for a `<select>` element using the array
  * obtained by evaluating the `ng:options` expression.
+ *
+ * When an item in the select menu is select, the array element represented by the selected option
+ * will be bound to the model identified by the `name` attribute of the parent select element.
  *
  * Optionally, a single hard-coded `<option>` element, with the value set to an empty string, can
  * be nested into the `<select>` element. This element will then represent `null` or "not selected"
@@ -554,14 +555,20 @@ angularWidget('button', inputWidgetSelector);
  * of {@link angular.widget.@ng:repeat ng:repeat}. `ng:repeat` is not suitable for use with
  * `<option>` element because of the following reasons:
  *
- *   * `option` value attribuet requires a string, where as the array we are trying to unroll is
- *     composed of objects.
+ *   * value attribute of the option element that we need to bind to requires a string, but the
+ *     source of data for the iteration might be in a form of array containing objects instead of
+ *     strings
  *   * {@link angular.widget.@ng:repeat ng:repeat} unrolls after the select binds causing
  *     incorect rendering on most browsers.
  *   * binding to a value not in list confuses most browsers.
  *
  * @element select
- * @param {comprehension_expression} comprehension _expresion_ `for` _item_ `in` _collection_.
+ * @param {comprehension_expression} comprehension _expresion_ `for` _item_ `in` _array_.
+ *
+ *   * _array_: an expression which evaluates to an array of objects to bind.
+ *   * _item_: local variable which will reffer to the item in the _array_ during the itteration
+ *   * _expression_: The result of this expression will is `option` label. The
+ *        `expression` most likely reffers to the _item_ varibale.
  *
  * @example
     <doc:example>
