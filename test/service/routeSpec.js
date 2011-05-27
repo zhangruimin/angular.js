@@ -16,7 +16,7 @@ describe('$route', function() {
         $location, $route;
 
     function BookChapter() {
-      this.log = '<init>';
+      log += '<init>';
     }
     scope = compile('<div></div>')();
     $location = scope.$service('$location');
@@ -26,11 +26,11 @@ describe('$route', function() {
     $route.onChange(function(){
       log += 'onChange();';
     });
+
     $location.update('http://server#/Book/Moby/Chapter/Intro?p=123');
     scope.$digest();
-    expect(log).toEqual('onChange();');
+    expect(log).toEqual('onChange();<init>');
     expect($route.current.params).toEqual({book:'Moby', chapter:'Intro', p:'123'});
-    expect($route.current.scope.log).toEqual('<init>');
     var lastId = $route.current.scope.$id;
 
     log = '';

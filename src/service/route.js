@@ -201,31 +201,32 @@ angularServiceInject('$route', function($location, $updateView) {
 
 
   function updateRoute(){
-    var childScope, routeParams, pathParams, segmentMatch, key, redir;
+    var selectedRoute, pathParams, segmentMatch, key, redir;
 
-    if ($route.current) {
+    if ($route.current && $route.current.scope) {
       $route.current.scope.$destroy();
     }
     $route.current = null;
+    // Match a route
     forEach(routes, function(rParams, rPath) {
       if (!pathParams) {
         if (pathParams = matcher($location.hashPath, rPath)) {
-          routeParams = rParams;
+          selectedRoute = rParams;
         }
       }
     });
 
-    // "otherwise" fallback
-    routeParams = routeParams || routes[null];
+    // No route matched; fallback to "otherwise" route
+    selectedRoute = selectedRoute || routes[null];
 
-    if(routeParams) {
-      if (routeParams.redirectTo) {
-        if (isString(routeParams.redirectTo)) {
+    if(selectedRoute) {
+      if (selectedRoute.redirectTo) {
+        if (isString(selectedRoute.redirectTo)) {
           // interpolate the redirectTo string
           redir = {hashPath: '',
                    hashSearch: extend({}, $location.hashSearch, pathParams)};
 
-          forEach(routeParams.redirectTo.split(':'), function(segment, i) {
+          forEach(selectedRoute.redirectTo.split(':'), function(segment, i) {
             if (i==0) {
               redir.hashPath += segment;
             } else {
@@ -238,7 +239,7 @@ angularServiceInject('$route', function($location, $updateView) {
           });
         } else {
           // call custom redirectTo function
-          redir = {hash: routeParams.redirectTo(pathParams, $location.hash, $location.hashPath,
+          redir = {hash: selectedRoute.redirectTo(pathParams, $location.hash, $location.hashPath,
                                                 $location.hashSearch)};
         }
 
@@ -246,15 +247,17 @@ angularServiceInject('$route', function($location, $updateView) {
         return;
       }
 
-      childScope = parentScope.$new(routeParams.controller);
-      $route.current = extend({}, routeParams, {
-        scope: childScope,
-        params: extend({}, $location.hashSearch, pathParams)
-      });
+      $route.current = extend({}, selectedRoute);
+      $route.current.params = extend({}, $location.hashSearch, pathParams);
     }
 
     //fire onChange callbacks
     forEach(onChange, parentScope.$eval, parentScope);
+
+    // Create the scope if we have mtched a route
+    if ($route.current) {
+      $route.current.scope = parentScope.$new($route.current.controller);
+    }
   }
 
 

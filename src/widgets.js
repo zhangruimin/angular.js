@@ -1228,27 +1228,21 @@ angularWidget('ng:view', function(element) {
   if (!element[0]['ng:compiled']) {
     element[0]['ng:compiled'] = true;
     return annotate('$xhr.cache', '$route', function($xhr, $route, element){
-      var childScope;
-      var src;
+      var template;
       var changeCounter = 0;
 
       $route.onChange(function(){
-        if ($route.current) {
-          src = $route.current.template;
-          childScope = $route.current.scope;
-        } else {
-          src = childScope = null;
-        }
         changeCounter++;
       })(); //initialize the state forcefully, it's possible that we missed the initial
             //$route#onChange already
 
       this.$observe(function(){return changeCounter;}, function(){
-        if (src) {
+        var template = $route.current && $route.current.template;
+        if (template) {
           //xhr's callback must be async, see commit history for more info
-          $xhr('GET', src, function(code, response){
+          $xhr('GET', template, function(code, response){
             element.html(response);
-            compiler.compile(element)(childScope);
+            compiler.compile(element)($route.current.scope);
           });
         } else {
           element.html('');
