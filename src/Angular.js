@@ -1147,7 +1147,6 @@ function assertArg(arg, name, reason) {
   if (!arg) {
     var error = new Error("Argument '" + (name||'?') + "' is " +
         (reason || "required"));
-    if (window.console) window.console.log(error.stack);
     throw error;
   }
 }
