@@ -439,9 +439,10 @@ describe('Scope', function(){
       var log = '';
       var child = root.$new();
       root.$watch('a', function(scope, a){ log += '1'; });
-      root.$observe('a', function(scope, a){ log += '2'; });
+      root.$observe('a', function(scope, a){ log += '3'; });
+      root.$service('$defer')('$burp', function() { log += '2'; });
       child.$apply('$parent.a=0');
-      expect(log).toEqual('12');
+      expect(log).toEqual('123');
     });
 
 
@@ -464,8 +465,11 @@ describe('Scope', function(){
         log = '';
         $exceptionHandler = jasmine.createSpy('$exceptionHandler');
         $updateView = jasmine.createSpy('$updateView');
+        $defer = {flush: jasmine.createSpy('$defer.flush')};
         root.$service = function(name) {
-          return {$updateView:$updateView, $exceptionHandler:$exceptionHandler}[name];
+          return {$updateView:$updateView,
+                  $exceptionHandler:$exceptionHandler,
+                  $defer:$defer}[name];
         };
         root.$watch(function(){ log += '$digest;'; });
         log = '';

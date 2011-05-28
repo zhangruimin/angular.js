@@ -101,7 +101,8 @@ function createScope(providers, instanceCache) {
  *       {@link angular.service.$exceptionHandler $exceptionHandler} service.
  *    3. The {@link angular.scope.$watch watch} listeners are fired immediately after
  *       the expression was executed using the {@link angular.scope.$digest $digest()} method.
- *    4. Finally the update of the DOM is scheduled using the
+ *    4. The `{@link angular.service.$defer $burp queue} with deferred tasks is flushed.
+ *    5. Finally the update of the DOM is scheduled using the
  *       {@link angular.service.$updateView $updateView} service (see step #6) The `$updateView`
  *       may merge multiple requests, that are close time-wise, into a single update.
  * 6. The {@link angular.service.$updateView $updateView} service then fires DOM
@@ -842,6 +843,7 @@ Scope.prototype = {
           $exceptionHandler(e);
         } finally {
           $root.$digest();
+          $defer.flush('$burp');
           $updateView();
         }
       }
@@ -860,6 +862,7 @@ Scope.prototype = {
       this.$service('$exceptionHandler')(e);
     } finally {
       this.$root.$digest();
+      this.$service('$defer').flush('$burp');
       this.$service('$updateView')();
     }
   }
