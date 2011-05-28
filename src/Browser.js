@@ -34,7 +34,8 @@ var XHR_HEADERS = {
 function Browser(window, document, body, XHR, $log) {
   var self = this,
       location = window.location,
-      setTimeout = window.setTimeout;
+      setTimeout = window.setTimeout,
+      lastLocationUrl;
 
   self.isMock = false;
 
@@ -200,10 +201,14 @@ function Browser(window, document, body, XHR, $log) {
    * Sets browser's url
    */
   self.setUrl = function(url) {
-    var existingURL = location.href;
+
+    var existingURL = lastLocationUrl;
     if (!existingURL.match(/#/)) existingURL += '#';
     if (!url.match(/#/)) url += '#';
-    location.href = url;
+    if (existingURL != url) {
+      console.log('$browser.setUrl', url);
+      location.href = url;
+    }
    };
 
   /**
@@ -218,7 +223,7 @@ function Browser(window, document, body, XHR, $log) {
    * @returns {string} Browser's url
    */
   self.getUrl = function() {
-    return location.href;
+    return lastLocationUrl = location.href;
   };
 
 
