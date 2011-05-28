@@ -39,14 +39,20 @@ describe('$location', function() {
   });
 
 
-  it('should update browser at the end of $eval', function() {
+  it('should update browser at the end of $apply', function() {
     var origBrowserUrl = $browser.getUrl();
     $location.update('http://www.angularjs.org/');
     $location.update({path: '/a/b'});
     expect($location.href).toEqual('http://www.angularjs.org/a/b');
-    expect($browser.getUrl()).toEqual('http://www.angularjs.org/a/b');
+    expect($browser.getUrl()).toEqual('http://server');
     $location.path = '/c';
+
+    //don't flush stuff to the browser
     scope.$digest();
+    expect($browser.getUrl()).toEqual('http://server');
+
+    //flush stuff to the browser
+    scope.$service('$defer').flush('$burp');
     expect($browser.getUrl()).toEqual('http://www.angularjs.org/c');
   });
 

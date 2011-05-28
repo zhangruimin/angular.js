@@ -66,9 +66,10 @@ var URL_MATCH = /^(file|ftp|http|https):\/\/(\w+:{0,1}\w*@)?([\w\.-]*)(:([0-9]+)
      </doc:scenario>
     </doc:example>
  */
-angularServiceInject("$location", function($browser) {
+angularServiceInject("$location", function($browser, $defer) {
   var location = {update: update, updateHash: updateHash};
   var lastLocation = {}; // last state since last update().
+  var deferId;
 
   $browser.onHashChange(bind(this, this.$apply, function() { //register
     update($browser.getUrl());
@@ -118,8 +119,10 @@ angularServiceInject("$location", function($browser) {
 
       location.href = composeHref(location);
     }
-    $browser.setUrl(location.href);
     copy(location, lastLocation);
+
+    $defer.cancel(deferId);
+    deferId = $defer('$burp', function() { $browser.setUrl(location.href); });
   }
 
   /**
@@ -270,4 +273,4 @@ angularServiceInject("$location", function($browser) {
 
     return h;
   }
-}, ['$browser']);
+}, ['$browser', '$defer']);
