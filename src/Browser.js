@@ -35,6 +35,8 @@ function Browser(window, document, body, XHR, $log) {
   var self = this,
       location = window.location,
       setTimeout = window.setTimeout,
+      clearTimeout = window.clearTimeout,
+      pendingDeferIds = {},
       lastLocationUrl;
 
   self.isMock = false;
@@ -348,9 +350,25 @@ function Browser(window, document, body, XHR, $log) {
    *
    */
   self.defer = function(fn, delay) {
+    var timeoutId;
     outstandingRequestCount++;
-    setTimeout(function() { completeOutstandingRequest(fn); }, delay || 0);
+    timeoutId = setTimeout(function() {
+      delete pendingDeferIds[timeoutId];
+      completeOutstandingRequest(fn);
+    }, delay || 0);
+    pendingDeferIds[timeoutId] = true;
+    return timeoutId;
   };
+
+
+  self.defer.cancel = function(deferId) {
+    if (pendingDeferIds[deferId]) {
+      delete pendingDeferIds[timeoutId];
+      clearTimeout(deferId);
+      return true;
+    }
+  };
+
 
   //////////////////////////////////////////////////////////////
   // Misc API
